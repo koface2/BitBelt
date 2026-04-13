@@ -53,7 +53,7 @@ export default function PromotionCard({
         ) : null}
 
         <View style={styles.bottomRow}>
-          <Text style={styles.meta}>{token.instructor}</Text>
+          <Text style={styles.meta}>{token.instructorName}</Text>
           <Text style={styles.date}>{promotionDate}</Text>
         </View>
       </View>

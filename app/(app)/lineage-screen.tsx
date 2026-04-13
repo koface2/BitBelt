@@ -32,7 +32,15 @@ export default function LineageScreen() {
     if (!target) return;
     const result = await fetchLineage(target);
     const nodes: LineageNode[] = result.map((tokens, index) => ({
-      address: index === 0 ? (target) : (tokens[0]?.instructor ?? "unknown"),
+      // The first node is the searched address; subsequent nodes are instructor wallet addresses
+      address:
+        index === 0
+          ? target
+          : (tokens[0]?.instructorAddress ?? "unknown"),
+      name:
+        index > 0 && tokens[0]?.instructorName
+          ? tokens[0].instructorName
+          : undefined,
       tokens,
     }));
     setLineage(nodes);

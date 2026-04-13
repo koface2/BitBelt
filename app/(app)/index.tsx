@@ -158,7 +158,7 @@ export default function DashboardScreen() {
                 beltColor={token.beltColor as BeltColor}
                 degree={token.degree}
                 holderName={shortAddress}
-                instructor={token.instructor}
+                instructor={token.instructorName}
                 gym={token.gym}
                 promotedAt={token.promotedAt}
                 tokenId={token.tokenId}

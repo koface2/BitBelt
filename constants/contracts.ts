@@ -4,12 +4,12 @@
 export const CONTRACTS = {
   // Base Mainnet (Chain ID: 8453)
   mainnet: {
-    SBT_CONTRACT: "0x0000000000000000000000000000000000000000", // Replace with deployed contract address
+    SBT_CONTRACT: process.env.EXPO_PUBLIC_SBT_CONTRACT_MAINNET ?? "",
     CHAIN_ID: 8453,
   },
   // Base Sepolia Testnet (Chain ID: 84532)
   testnet: {
-    SBT_CONTRACT: "0x0000000000000000000000000000000000000000", // Replace with deployed contract address
+    SBT_CONTRACT: process.env.EXPO_PUBLIC_SBT_CONTRACT_TESTNET ?? "",
     CHAIN_ID: 84532,
   },
 } as const;
@@ -26,5 +26,16 @@ export const THIRDWEB_CLIENT_ID =
 
 // Thirdweb Account Abstraction
 export const ACCOUNT_FACTORY_ADDRESS =
-  process.env.EXPO_PUBLIC_ACCOUNT_FACTORY_ADDRESS ??
-  "0x9aBE1F3A19f79BA9B7a1e8fDC5B9A3D4e6F7C8B2"; // Replace with deployed factory address
+  process.env.EXPO_PUBLIC_ACCOUNT_FACTORY_ADDRESS ?? "";
+
+/**
+ * Returns true if the contract address is set and non-zero.
+ * Used to guard blockchain interactions before contracts are deployed.
+ */
+export function isContractConfigured(address: string): boolean {
+  return (
+    address.length > 0 &&
+    address !== "0x0000000000000000000000000000000000000000"
+  );
+}
+

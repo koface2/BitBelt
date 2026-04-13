@@ -27,6 +27,7 @@ export default function PromotionScreen() {
   const [selectedBelt, setSelectedBelt] = useState<BeltColor>("blue");
   const [selectedDegree, setSelectedDegree] = useState<BeltDegree>(0);
   const [instructorName, setInstructorName] = useState("");
+  const [instructorAddress, setInstructorAddress] = useState("");
   const [gymName, setGymName] = useState("");
   const [metadataUri, setMetadataUri] = useState("");
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -42,8 +43,20 @@ export default function PromotionScreen() {
       Alert.alert("Missing Field", "Please enter the instructor name.");
       return;
     }
+    if (!instructorAddress.trim()) {
+      Alert.alert("Missing Field", "Please enter the instructor's wallet address.");
+      return;
+    }
     if (!/^0x[a-fA-F0-9]{40}$/.test(recipientAddress.trim())) {
-      Alert.alert("Invalid Address", "Please enter a valid Ethereum address.");
+      Alert.alert("Invalid Address", "Please enter a valid recipient Ethereum address.");
+      return;
+    }
+    if (!/^0x[a-fA-F0-9]{40}$/.test(instructorAddress.trim())) {
+      Alert.alert("Invalid Address", "Please enter a valid instructor Ethereum address.");
+      return;
+    }
+    if (!metadataUri.trim()) {
+      Alert.alert("Missing Field", "Please provide a metadata URI (IPFS link to the token metadata).");
       return;
     }
 
@@ -51,9 +64,10 @@ export default function PromotionScreen() {
       recipient: recipientAddress.trim(),
       beltColor: selectedBelt,
       degree: selectedDegree,
-      instructor: instructorName.trim(),
+      instructorName: instructorName.trim(),
+      instructorAddress: instructorAddress.trim(),
       gym: gymName.trim(),
-      metadataUri: metadataUri.trim() || `ipfs://bitbelt/${selectedBelt}/${selectedDegree}`,
+      metadataUri: metadataUri.trim(),
     });
 
     if (hash) {
@@ -71,6 +85,7 @@ export default function PromotionScreen() {
     setSelectedBelt("blue");
     setSelectedDegree(0);
     setInstructorName("");
+    setInstructorAddress("");
     setGymName("");
     setMetadataUri("");
     setTxHash(null);
@@ -183,6 +198,20 @@ export default function PromotionScreen() {
               />
             </View>
 
+            {/* Instructor Address */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Instructor Wallet Address *</Text>
+              <TextInput
+                style={styles.input}
+                value={instructorAddress}
+                onChangeText={setInstructorAddress}
+                placeholder="0x... (used for lineage tracking)"
+                placeholderTextColor="#475569"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
             {/* Gym */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Gym / Academy</Text>
@@ -197,12 +226,12 @@ export default function PromotionScreen() {
 
             {/* Metadata URI */}
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Metadata URI (IPFS)</Text>
+              <Text style={styles.sectionLabel}>Metadata URI (IPFS) *</Text>
               <TextInput
                 style={styles.input}
                 value={metadataUri}
                 onChangeText={setMetadataUri}
-                placeholder="ipfs://... (optional)"
+                placeholder="ipfs://Qm..."
                 placeholderTextColor="#475569"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -232,6 +261,11 @@ export default function PromotionScreen() {
                     <Text style={styles.previewAddress} numberOfLines={1}>
                       → {recipientAddress.slice(0, 8)}...{recipientAddress.slice(-6)}
                     </Text>
+                    {instructorAddress.trim() ? (
+                      <Text style={styles.previewAddress} numberOfLines={1}>
+                        instructor: {instructorAddress.slice(0, 8)}...{instructorAddress.slice(-6)}
+                      </Text>
+                    ) : null}
                   </View>
                 </View>
               </View>

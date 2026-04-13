@@ -106,7 +106,8 @@ function mintPromotion(
     address recipient,
     string memory beltColor,
     uint8 degree,
-    string memory instructor,
+    string memory instructorName,
+    address instructorAddress,
     string memory gym,
     string memory metadataUri
 ) external returns (uint256 tokenId);
@@ -114,7 +115,8 @@ function mintPromotion(
 function getTokenData(uint256 tokenId) external view returns (
     string memory beltColor,
     uint8 degree,
-    string memory instructor,
+    string memory instructorName,
+    address instructorAddress,
     string memory gym,
     uint256 promotedAt,
     string memory metadataUri

@@ -7,20 +7,26 @@ import {
 } from "thirdweb";
 import { base, baseSepolia } from "thirdweb/chains";
 import { useActiveAccount } from "thirdweb/react";
-import { ACTIVE_NETWORK, THIRDWEB_CLIENT_ID } from "@/constants/contracts";
+import {
+  ACTIVE_NETWORK,
+  THIRDWEB_CLIENT_ID,
+  isContractConfigured,
+} from "@/constants/contracts";
 import { createThirdwebClient } from "thirdweb";
 import type { BeltColor, BeltDegree } from "@/constants/belts";
 
 const client = createThirdwebClient({ clientId: THIRDWEB_CLIENT_ID });
 
-const chain =
-  ACTIVE_NETWORK.CHAIN_ID === 8453 ? base : baseSepolia;
+const chain = ACTIVE_NETWORK.CHAIN_ID === 8453 ? base : baseSepolia;
 
 export interface SBTToken {
   tokenId: string;
   beltColor: BeltColor;
   degree: BeltDegree;
-  instructor: string;
+  /** Human-readable instructor name */
+  instructorName: string;
+  /** Instructor's wallet address — used for lineage traversal */
+  instructorAddress: string;
   gym: string;
   promotedAt: number;
   metadataUri: string;
@@ -39,17 +45,22 @@ export function useSBT() {
 
   /**
    * Fetch all SBT tokens owned by an address (or the active wallet).
+   * Returns an empty array if the contract is not yet configured.
    */
   const fetchTokens = useCallback(
     async (address?: string): Promise<SBTToken[]> => {
       const owner = address ?? account?.address;
       if (!owner) return [];
 
+      if (!isContractConfigured(ACTIVE_NETWORK.SBT_CONTRACT)) {
+        setError("SBT contract address is not configured.");
+        return [];
+      }
+
       setLoading(true);
       setError(null);
 
       try {
-        // Read the balance of tokens for the owner
         const balance = await readContract({
           contract,
           method:
@@ -68,10 +79,11 @@ export function useSBT() {
             params: [owner, BigInt(i)],
           });
 
+          // Contract returns: beltColor, degree, instructorName, instructorAddress, gym, promotedAt, metadataUri
           const tokenData = await readContract({
             contract,
             method:
-              "function getTokenData(uint256 tokenId) view returns (string beltColor, uint8 degree, string instructor, string gym, uint256 promotedAt, string metadataUri)",
+              "function getTokenData(uint256 tokenId) view returns (string beltColor, uint8 degree, string instructorName, address instructorAddress, string gym, uint256 promotedAt, string metadataUri)",
             params: [tokenId],
           });
 
@@ -79,10 +91,11 @@ export function useSBT() {
             tokenId: tokenId.toString(),
             beltColor: tokenData[0] as BeltColor,
             degree: tokenData[1] as BeltDegree,
-            instructor: tokenData[2],
-            gym: tokenData[3],
-            promotedAt: Number(tokenData[4]),
-            metadataUri: tokenData[5],
+            instructorName: tokenData[2],
+            instructorAddress: tokenData[3],
+            gym: tokenData[4],
+            promotedAt: Number(tokenData[5]),
+            metadataUri: tokenData[6],
           });
         }
 
@@ -101,18 +114,26 @@ export function useSBT() {
 
   /**
    * Mint a new SBT promotion token (instructor-initiated).
+   * Returns the transaction hash, or null on failure.
+   * No-ops if the contract address is not configured.
    */
   const mintPromotion = useCallback(
     async (params: {
       recipient: string;
       beltColor: BeltColor;
       degree: BeltDegree;
-      instructor: string;
+      instructorName: string;
+      instructorAddress: string;
       gym: string;
       metadataUri: string;
     }): Promise<string | null> => {
       if (!account) {
         setError("No wallet connected");
+        return null;
+      }
+
+      if (!isContractConfigured(ACTIVE_NETWORK.SBT_CONTRACT)) {
+        setError("SBT contract address is not configured.");
         return null;
       }
 
@@ -123,12 +144,13 @@ export function useSBT() {
         const transaction = prepareContractCall({
           contract,
           method:
-            "function mintPromotion(address recipient, string beltColor, uint8 degree, string instructor, string gym, string metadataUri) returns (uint256)",
+            "function mintPromotion(address recipient, string beltColor, uint8 degree, string instructorName, address instructorAddress, string gym, string metadataUri) returns (uint256)",
           params: [
             params.recipient,
             params.beltColor,
             params.degree,
-            params.instructor,
+            params.instructorName,
+            params.instructorAddress,
             params.gym,
             params.metadataUri,
           ],
@@ -154,6 +176,8 @@ export function useSBT() {
 
   /**
    * Fetch the lineage (chain of instructors) for an address.
+   * Traversal uses `instructorAddress` — the on-chain wallet address of the instructor,
+   * which is distinct from `instructorName` (the human-readable display name).
    */
   const fetchLineage = useCallback(
     async (address?: string): Promise<SBTToken[][]> => {
@@ -165,17 +189,26 @@ export function useSBT() {
 
       try {
         const lineage: SBTToken[][] = [];
-        let currentAddress = startAddress;
+        let currentAddress: string = startAddress;
         const visited = new Set<string>();
 
-        while (currentAddress && !visited.has(currentAddress)) {
-          visited.add(currentAddress);
+        while (currentAddress && !visited.has(currentAddress.toLowerCase())) {
+          visited.add(currentAddress.toLowerCase());
           const tokens = await fetchTokens(currentAddress);
           if (tokens.length > 0) {
             lineage.push(tokens);
-            // Follow the instructor chain
+            // Follow the instructor wallet address chain
             const latestToken = tokens[tokens.length - 1];
-            currentAddress = latestToken.instructor;
+            const nextAddress = latestToken.instructorAddress;
+            // Stop if next address is zero or identical to current
+            if (
+              !nextAddress ||
+              !isContractConfigured(nextAddress) ||
+              nextAddress.toLowerCase() === currentAddress.toLowerCase()
+            ) {
+              break;
+            }
+            currentAddress = nextAddress;
           } else {
             break;
           }
@@ -202,3 +235,4 @@ export function useSBT() {
     fetchLineage,
   };
 }
+
