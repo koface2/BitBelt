@@ -1,46 +1,34 @@
 /**
- * BitBelt — Design System Tokens
+ * BitBelt — Design System Tokens (Expo app copy)
+ * Keep in sync with /constants/Theme.ts at the repo root.
  *
- * Aesthetic: Clean, minimalist, high-trust (SaaS / Fintech)
- * Background: Pure White (#FFFFFF)
- * Primary Action: Jiu-Jitsu Blue (#0055FF)
- *
- * Accessibility: WCAG AA contrast on all text/background pairs.
- * Touch Targets: All interactive elements must be at least 44 × 44 px.
+ * Inlined here because Metro cannot resolve paths that escape the
+ * project root (/workspaces/BitBelt/BitBelt/).
  */
 
 // ---------------------------------------------------------------------------
 // Colors
 // ---------------------------------------------------------------------------
 export const ThemeColors = {
-  // --- Core palette ---
   white:        "#FFFFFF",
-  background:   "#FFFFFF",   // Pure White — app background
-  surface:      "#F5F7FF",   // Off-white — card / sheet surfaces
-  surfaceAlt:   "#EEF1FF",   // Hover / pressed state for cards
-
-  // --- Jiu-Jitsu Blue (primary actions) ---
-  primary:      "#0055FF",   // CTA buttons, active states, links
-  primaryLight: "#4488FF",   // Hover / ripple overlay
-  primaryDark:  "#003DBF",   // Pressed / focus ring
-  primaryMuted: "#E5EEFF",   // Tinted backgrounds, chips, badges
-
-  // --- Neutrals ---
-  gray900: "#0D0D0D",  // headings, primary text
-  gray700: "#374151",  // body text
-  gray500: "#6B7280",  // secondary / helper text
-  gray300: "#D1D5DB",  // borders, dividers
-  gray100: "#F3F4F6",  // subtle backgrounds, input fills
-
-  // --- Semantic states ---
+  background:   "#FFFFFF",
+  surface:      "#F5F7FF",
+  surfaceAlt:   "#EEF1FF",
+  primary:      "#0055FF",
+  primaryLight: "#4488FF",
+  primaryDark:  "#003DBF",
+  primaryMuted: "#E5EEFF",
+  gray900: "#0D0D0D",
+  gray700: "#374151",
+  gray500: "#6B7280",
+  gray300: "#D1D5DB",
+  gray100: "#F3F4F6",
   success:      "#16A34A",
   successLight: "#DCFCE7",
   error:        "#DC2626",
   errorLight:   "#FEE2E2",
   warning:      "#D97706",
   warningLight: "#FEF3C7",
-
-  // --- BJJ Belt colors ---
   belt: {
     white:  "#FFFFFF",
     blue:   "#1E5BB5",
@@ -50,10 +38,8 @@ export const ThemeColors = {
     coral:  "#FF6B35",
     red:    "#DC2626",
   },
-
-  // --- Text on colored backgrounds ---
-  onPrimary:  "#FFFFFF",   // text/icons on primary blue
-  onSurface:  "#0D0D0D",   // text/icons on white surface
+  onPrimary:  "#FFFFFF",
+  onSurface:  "#0D0D0D",
   onBelt: {
     white:  "#0D0D0D",
     blue:   "#FFFFFF",
@@ -66,15 +52,15 @@ export const ThemeColors = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Spacing  (4-pt base grid)
+// Spacing (4-pt base grid)
 // ---------------------------------------------------------------------------
 export const Spacing = {
-  xs:   4,
-  sm:   8,
-  md:   12,
-  base: 16,
-  lg:   20,
-  xl:   24,
+  xs:    4,
+  sm:    8,
+  md:    12,
+  base:  16,
+  lg:    20,
+  xl:    24,
   "2xl": 32,
   "3xl": 40,
   "4xl": 48,
@@ -86,12 +72,12 @@ export const Spacing = {
 // ---------------------------------------------------------------------------
 export const Typography = {
   size: {
-    xs:   11,
-    sm:   13,
-    base: 16,
-    md:   18,
-    lg:   22,
-    xl:   28,
+    xs:    11,
+    sm:    13,
+    base:  16,
+    md:    18,
+    lg:    22,
+    xl:    28,
     "2xl": 36,
   },
   weight: {
@@ -101,69 +87,41 @@ export const Typography = {
     bold:      "700" as const,
     extrabold: "800" as const,
   },
-  lineHeight: {
-    tight:   1.2,
-    normal:  1.5,
-    relaxed: 1.75,
-  },
+  lineHeight: { tight: 1.2, normal: 1.5, relaxed: 1.75 },
 } as const;
 
 // ---------------------------------------------------------------------------
 // Border Radius
 // ---------------------------------------------------------------------------
 export const Radius = {
-  sm:   4,
-  md:   8,
-  lg:   12,
-  xl:   16,
+  sm:    4,
+  md:    8,
+  lg:    12,
+  xl:    16,
   "2xl": 20,
-  full: 9999,
+  full:  9999,
 } as const;
 
 // ---------------------------------------------------------------------------
-// Shadows  (iOS + Android compatible)
+// Shadows
 // ---------------------------------------------------------------------------
 export const Shadow = {
-  sm: {
-    shadowColor:   "#000000",
-    shadowOffset:  { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius:  2,
-    elevation:     2,
-  },
-  md: {
-    shadowColor:   "#000000",
-    shadowOffset:  { width: 0, height: 4 },
-    shadowOpacity: 0.10,
-    shadowRadius:  8,
-    elevation:     4,
-  },
-  lg: {
-    shadowColor:   "#000000",
-    shadowOffset:  { width: 0, height: 8 },
-    shadowOpacity: 0.14,
-    shadowRadius:  16,
-    elevation:     8,
-  },
-  primary: {
-    shadowColor:   "#0055FF",
-    shadowOffset:  { width: 0, height: 4 },
-    shadowOpacity: 0.30,
-    shadowRadius:  12,
-    elevation:     6,
-  },
+  sm:      { shadowColor: "#000000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 2,  elevation: 2 },
+  md:      { shadowColor: "#000000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.10, shadowRadius: 8,  elevation: 4 },
+  lg:      { shadowColor: "#000000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.14, shadowRadius: 16, elevation: 8 },
+  primary: { shadowColor: "#0055FF", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.30, shadowRadius: 12, elevation: 6 },
 } as const;
 
 // ---------------------------------------------------------------------------
-// Touch Targets  (Priority 2 — React Native accessibility minimum)
+// Touch Targets
 // ---------------------------------------------------------------------------
 export const TouchTarget = {
-  minSize: 44,   // px — meets Apple HIG & Android Material minimum
+  minSize:    44,
   minHitSlop: { top: 8, right: 8, bottom: 8, left: 8 },
 } as const;
 
 // ---------------------------------------------------------------------------
-// Convenience re-export
+// Convenience export
 // ---------------------------------------------------------------------------
 export const Theme = {
   colors:      ThemeColors,
