@@ -36,7 +36,7 @@ export default function HomeScreen() {
   // ── Redirect to main app once connected ──────────────────────────────────
   useEffect(() => {
     if (account) {
-      router.replace("/promote");
+      router.replace("/dashboard");
     }
   }, [account]);
 
