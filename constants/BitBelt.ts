@@ -7,6 +7,7 @@
 
 import { createThirdwebClient, getContract } from "thirdweb";
 import { baseSepolia } from "thirdweb/chains";
+import { inAppWallet } from "thirdweb/wallets";
 
 // ── Client ────────────────────────────────────────────────────────────────
 // EXPO_PUBLIC_ prefix required for Expo to expose the var to the JS bundle.
@@ -33,3 +34,12 @@ export const sbtContract = getContract({
 // Verified from the deploy broadcast output.
 export const INSTRUCTOR_ROLE =
   "0xae4a0595970935aa5495afbbb72e5f1f6ff1062766b4a3028c0c9b7d5cf7e345" as `0x${string}`;
+
+// ── Shared wallet singleton ───────────────────────────────────────────────
+// Module-level so the same instance is reused across screens and AutoConnect.
+export const wallet = inAppWallet({
+  smartAccount: {
+    chain,
+    sponsorGas: true,
+  },
+});

@@ -25,10 +25,10 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
-import { useActiveAccount, useSendTransaction } from "thirdweb/react";
+import { useActiveAccount, useDisconnect, useSendTransaction } from "thirdweb/react";
 import { prepareContractCall } from "thirdweb";
 import { Theme } from "@/constants/Theme";
-import { sbtContract } from "@/constants/BitBelt";
+import { chain, sbtContract, wallet } from "@/constants/BitBelt";
 
 const { colors, spacing, typography, radius, shadow, touchTarget } = Theme;
 
@@ -61,6 +61,12 @@ export default function PromoteScreen() {
   const router = useRouter();
   const account = useActiveAccount();
   const { mutate: sendTx, isPending } = useSendTransaction();
+  const { disconnect } = useDisconnect();
+
+  const handleSignOut = () => {
+    disconnect(wallet);
+    router.replace("/(tabs)");
+  };
 
   // ── Form state ──────────────────────────────────────────────────────────────
   const [studentAddress, setStudentAddress] = useState("");
@@ -132,19 +138,19 @@ export default function PromoteScreen() {
 
           {/* ── Header ── */}
           <View style={styles.header}>
-            <Pressable
-              onPress={() => router.back()}
-              hitSlop={touchTarget.minHitSlop}
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-              style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-            >
-              <Text style={styles.backIcon}>←</Text>
-            </Pressable>
             <View style={styles.headerText}>
               <Text style={styles.screenTitle}>Issue Certificate</Text>
               <Text style={styles.screenSubtitle}>BELT PROMOTION</Text>
             </View>
+            <Pressable
+              onPress={handleSignOut}
+              hitSlop={touchTarget.minHitSlop}
+              accessibilityRole="button"
+              accessibilityLabel="Sign out"
+              style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
+            >
+              <Text style={styles.backIcon}>Sign Out</Text>
+            </Pressable>
           </View>
 
           {/* ── Instructor badge ── */}

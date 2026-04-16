@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,21 +13,11 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useActiveAccount, useConnect, useDisconnect, useReadContract } from "thirdweb/react";
-import { inAppWallet, preAuthenticate } from "thirdweb/wallets";
+import { preAuthenticate } from "thirdweb/wallets";
 import { Theme } from "@/constants/Theme";
-import { client, chain, sbtContract, INSTRUCTOR_ROLE } from "@/constants/BitBelt";
+import { client, chain, sbtContract, INSTRUCTOR_ROLE, wallet } from "@/constants/BitBelt";
 
 const { colors, spacing, typography, radius, shadow, touchTarget } = Theme;
-
-// ── Wallet factory (module-level — safe to reuse across renders) ────────────
-// inAppWallet with smartAccount enables gasless ERC-4337 transactions via
-// Thirdweb Paymaster on Base Sepolia. The app user never sees gas.
-const wallet = inAppWallet({
-  smartAccount: {
-    chain,
-    sponsorGas: true,
-  },
-});
 
 // ── Screen ─────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
@@ -42,6 +32,13 @@ export default function HomeScreen() {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const [isSendingOtp, setIsSendingOtp] = useState(false);
+
+  // ── Redirect to main app once connected ──────────────────────────────────
+  useEffect(() => {
+    if (account) {
+      router.replace("/promote");
+    }
+  }, [account]);
 
   // ── On-chain instructor role check ───────────────────────────────────────
   const { data: isInstructor } = useReadContract({

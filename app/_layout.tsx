@@ -9,9 +9,10 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
-import { ThirdwebProvider } from 'thirdweb/react';
+import { AutoConnect, ThirdwebProvider } from 'thirdweb/react';
 
 import { useColorScheme } from '@/components/useColorScheme';
+import { client, wallet } from '@/constants/BitBelt';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -55,9 +56,11 @@ function RootLayoutNav() {
 
   return (
     <ThirdwebProvider>
+      <AutoConnect client={client} wallets={[wallet]} />
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="promote" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         </Stack>
       </ThemeProvider>
