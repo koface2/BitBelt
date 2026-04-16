@@ -42,7 +42,7 @@ contract DeployBitBelt is Script {
         address admin = vm.envAddress("DEPLOYER_ADDRESS");
 
         console2.log("============================================================");
-        console2.log(" BitBelt SBT — Deployment Script");
+        console2.log(" BitBelt SBT - Deployment Script");
         console2.log("============================================================");
         console2.log("  Chain ID      :", block.chainid);
         console2.log("  Admin address :", admin);
@@ -52,7 +52,7 @@ contract DeployBitBelt is Script {
         // Sanity check: Base Sepolia = 84532, Base Mainnet = 8453
         require(
             block.chainid == 84532 || block.chainid == 8453,
-            "Deploy: wrong network — target Base Sepolia (84532) or Base Mainnet (8453)"
+            "Deploy: wrong network - target Base Sepolia (84532) or Base Mainnet (8453)"
         );
 
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));

@@ -94,7 +94,7 @@ contract BitBeltSBT is ERC721, AccessControl {
         address from = _ownerOf(tokenId); // address(0) when minting
         require(
             from == address(0) || to == address(0),
-            "BitBeltSBT: soulbound — token is non-transferable"
+            "BitBeltSBT: soulbound - token is non-transferable"
         );
         return super._update(to, tokenId, auth);
     }

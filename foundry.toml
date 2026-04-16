@@ -9,9 +9,8 @@ remappings = [
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
 ]
 
-[profile.default.optimizer]
-enabled = true
-runs    = 200
+optimizer        = true
+optimizer_runs   = 200
 
 # ── RPC endpoints ─────────────────────────────────────────────────────────────
 [rpc_endpoints]
