@@ -1,3 +1,7 @@
+// Polyfills — must come before any thirdweb / crypto imports
+import "@thirdweb-dev/react-native-adapter";
+import "react-native-get-random-values";
+
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';

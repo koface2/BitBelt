@@ -104,12 +104,14 @@ export const Radius = {
 
 // ---------------------------------------------------------------------------
 // Shadows
+// boxShadow is used by React Native Web (new arch); shadow* props remain for
+// older native renderers / Expo Go on device.
 // ---------------------------------------------------------------------------
 export const Shadow = {
-  sm:      { shadowColor: "#000000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 2,  elevation: 2 },
-  md:      { shadowColor: "#000000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.10, shadowRadius: 8,  elevation: 4 },
-  lg:      { shadowColor: "#000000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.14, shadowRadius: 16, elevation: 8 },
-  primary: { shadowColor: "#0055FF", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.30, shadowRadius: 12, elevation: 6 },
+  sm:      { shadowColor: "#000000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 2,  elevation: 2, boxShadow: "0px 1px 2px rgba(0,0,0,0.06)" },
+  md:      { shadowColor: "#000000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.10, shadowRadius: 8,  elevation: 4, boxShadow: "0px 4px 8px rgba(0,0,0,0.10)" },
+  lg:      { shadowColor: "#000000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.14, shadowRadius: 16, elevation: 8, boxShadow: "0px 8px 16px rgba(0,0,0,0.14)" },
+  primary: { shadowColor: "#0055FF", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.30, shadowRadius: 12, elevation: 6, boxShadow: "0px 4px 12px rgba(0,85,255,0.30)" },
 } as const;
 
 // ---------------------------------------------------------------------------

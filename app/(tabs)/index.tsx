@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useActiveAccount, useConnect, useDisconnect, useReadContract } from "thirdweb/react";
-import { inAppWallet } from "thirdweb/wallets";
+import { inAppWallet, preAuthenticate } from "thirdweb/wallets";
 import { Theme } from "@/constants/Theme";
 import { client, chain, sbtContract, INSTRUCTOR_ROLE } from "@/constants/BitBelt";
 
@@ -33,12 +33,15 @@ const wallet = inAppWallet({
 export default function HomeScreen() {
   const router = useRouter();
   const account = useActiveAccount();
-  const { connect, isConnecting } = useConnect();
+  const { connect, isConnecting, error: connectError } = useConnect();
   const { disconnect } = useDisconnect();
 
   // Email auth state
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [email, setEmail] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
 
   // ── On-chain instructor role check ───────────────────────────────────────
   const { data: isInstructor } = useReadContract({
@@ -56,18 +59,33 @@ export default function HomeScreen() {
     });
   };
 
-  const connectEmail = () => {
-    if (!email.trim()) return;
-    connect(async () => {
-      await wallet.connect({ client, strategy: "email", email: email.trim() });
-      return wallet;
-    });
+  const connectEmail = async () => {
+    if (!otpSent) {
+      // Step 1: send verification code
+      if (!email.trim()) return;
+      setIsSendingOtp(true);
+      try {
+        await preAuthenticate({ client, strategy: "email", email: email.trim() });
+        setOtpSent(true);
+      } finally {
+        setIsSendingOtp(false);
+      }
+    } else {
+      // Step 2: connect with the code
+      if (!otp.trim()) return;
+      connect(async () => {
+        await wallet.connect({ client, strategy: "email", email: email.trim(), verificationCode: otp.trim() });
+        return wallet;
+      });
+    }
   };
 
   const handleDisconnect = () => {
     disconnect(wallet);
     setShowEmailInput(false);
     setEmail("");
+    setOtpSent(false);
+    setOtp("");
   };
 
   // ── Derived display values ────────────────────────────────────────────────
@@ -175,7 +193,8 @@ export default function HomeScreen() {
                   >
                     <Text style={styles.secondaryButtonText}>Continue with Email</Text>
                   </Pressable>
-                ) : (
+                ) : !otpSent ? (
+                  // Step 1 — enter email
                   <View style={styles.emailInputRow}>
                     <TextInput
                       style={styles.emailInput}
@@ -194,12 +213,45 @@ export default function HomeScreen() {
                       style={({ pressed }) => [
                         styles.emailSubmitButton,
                         pressed && styles.primaryButtonPressed,
-                        (isConnecting || !email.trim()) && styles.primaryButtonLoading,
+                        (isSendingOtp || !email.trim()) && styles.primaryButtonLoading,
                       ]}
                       onPress={connectEmail}
-                      disabled={isConnecting || !email.trim()}
+                      disabled={isSendingOtp || !email.trim()}
                       accessibilityRole="button"
-                      accessibilityLabel="Sign in"
+                      accessibilityLabel="Send code"
+                    >
+                      {isSendingOtp ? (
+                        <ActivityIndicator color={colors.onPrimary} size="small" />
+                      ) : (
+                        <Text style={styles.primaryButtonText}>→</Text>
+                      )}
+                    </Pressable>
+                  </View>
+                ) : (
+                  // Step 2 — enter OTP
+                  <View style={styles.emailInputRow}>
+                    <TextInput
+                      style={styles.emailInput}
+                      placeholder="6-digit code"
+                      placeholderTextColor={colors.gray500}
+                      value={otp}
+                      onChangeText={setOtp}
+                      keyboardType="number-pad"
+                      autoCapitalize="none"
+                      accessibilityLabel="Verification code"
+                      returnKeyType="go"
+                      onSubmitEditing={connectEmail}
+                    />
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.emailSubmitButton,
+                        pressed && styles.primaryButtonPressed,
+                        (isConnecting || !otp.trim()) && styles.primaryButtonLoading,
+                      ]}
+                      onPress={connectEmail}
+                      disabled={isConnecting || !otp.trim()}
+                      accessibilityRole="button"
+                      accessibilityLabel="Verify code"
                     >
                       {isConnecting ? (
                         <ActivityIndicator color={colors.onPrimary} size="small" />
@@ -210,9 +262,15 @@ export default function HomeScreen() {
                   </View>
                 )}
 
-                <Text style={styles.legalNote}>
-                  Free to use · Certificates secured by blockchain
-                </Text>
+                {connectError ? (
+                  <Text style={styles.errorNote}>
+                    {connectError.message ?? "Connection failed. Check your network and try again."}
+                  </Text>
+                ) : (
+                  <Text style={styles.legalNote}>
+                    Free to use · Certificates secured by blockchain
+                  </Text>
+                )}
               </>
             ) : (
               // ── Connected ─────────────────────────────────────
@@ -530,6 +588,13 @@ const styles = StyleSheet.create({
   legalNote: {
     fontSize: typography.size.xs,
     color: colors.gray500,
+    textAlign: "center",
+    paddingTop: spacing.xs,
+  },
+
+  errorNote: {
+    fontSize: typography.size.xs,
+    color: colors.error,
     textAlign: "center",
     paddingTop: spacing.xs,
   },
