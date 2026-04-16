@@ -41,14 +41,6 @@ export default function HomeScreen() {
     }
   }, [account]);
 
-  // Immediate guard: if account is already known, render a transparent
-  // loading screen instead of briefly flashing the login UI.
-  if (account) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} />
-    );
-  }
-
   // ── On-chain instructor role check ───────────────────────────────────────
   const { data: isInstructor } = useReadContract({
     contract: sbtContract,
@@ -98,6 +90,12 @@ export default function HomeScreen() {
   const shortAddress = account
     ? `${account.address.slice(0, 6)}…${account.address.slice(-4)}`
     : null;
+
+  // All hooks are above — safe to early-return now.
+  // Show a blank screen while useEffect redirect fires to avoid login flash.
+  if (account) {
+    return <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} />;
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
