@@ -109,6 +109,15 @@ export default function DashboardScreen() {
     router.replace("/(tabs)");
   };
 
+  // Guard: if account not yet known, show blank screen while AutoConnect works.
+  // If account is definitively null after a disconnect, the sign-out handler
+  // already navigates away, so this only shows briefly during initial load.
+  if (!account) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} />
+    );
+  }
+
   const handleTilePress = (tile: NavTile) => {
     if (tile.route) {
       router.push(tile.route as any);

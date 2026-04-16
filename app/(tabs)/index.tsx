@@ -34,11 +34,20 @@ export default function HomeScreen() {
   const [isSendingOtp, setIsSendingOtp] = useState(false);
 
   // ── Redirect to main app once connected ──────────────────────────────────
+  // useEffect handles the async case (AutoConnect reconnecting on load).
   useEffect(() => {
     if (account) {
       router.replace("/dashboard");
     }
   }, [account]);
+
+  // Immediate guard: if account is already known, render a transparent
+  // loading screen instead of briefly flashing the login UI.
+  if (account) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} />
+    );
+  }
 
   // ── On-chain instructor role check ───────────────────────────────────────
   const { data: isInstructor } = useReadContract({
