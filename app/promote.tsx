@@ -81,11 +81,11 @@ export default function PromoteScreen() {
   // ── Mint handler ─────────────────────────────────────────────────────────────
   const handleConfirm = () => {
     if (!account) {
-      Alert.alert("Not Connected", "Please connect your wallet first.");
+      Alert.alert("Not Signed In", "Please sign in first.");
       return;
     }
     if (!addressValid) {
-      Alert.alert("Invalid Address", "Please enter a valid 0x wallet address.");
+      Alert.alert("Invalid Address", "Please enter a valid recipient address.");
       return;
     }
 
@@ -142,8 +142,8 @@ export default function PromoteScreen() {
               <Text style={styles.backIcon}>←</Text>
             </Pressable>
             <View style={styles.headerText}>
-              <Text style={styles.screenTitle}>Promotion Form</Text>
-              <Text style={styles.screenSubtitle}>ISSUE BELT SBT</Text>
+              <Text style={styles.screenTitle}>Issue Certificate</Text>
+              <Text style={styles.screenSubtitle}>BELT PROMOTION</Text>
             </View>
           </View>
 
@@ -152,14 +152,14 @@ export default function PromoteScreen() {
             <View style={styles.instructorBadge}>
               <View style={styles.instructorDot} />
               <Text style={styles.instructorBadgeText}>
-                Issuing as {account.address.slice(0, 6)}…{account.address.slice(-4)}
+                Certifying as {account.address.slice(0, 6)}…{account.address.slice(-4)}
               </Text>
             </View>
           )}
 
           {/* ── Student Wallet ── */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>STUDENT WALLET</Text>
+            <Text style={styles.sectionLabel}>RECIPIENT</Text>
             <View
               style={[
                 styles.inputContainer,
@@ -184,7 +184,7 @@ export default function PromoteScreen() {
               )}
             </View>
             {addressTouched && !addressValid && (
-              <Text style={styles.fieldError}>Enter a valid 0x Ethereum address</Text>
+              <Text style={styles.fieldError}>Enter a valid recipient address</Text>
             )}
           </View>
 
@@ -324,7 +324,7 @@ export default function PromoteScreen() {
 
           {/* ── Summary card ── */}
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>PROMOTION SUMMARY</Text>
+            <Text style={styles.summaryTitle}>CERTIFICATE SUMMARY</Text>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Belt</Text>
               <View style={[styles.summaryBeltBadge, { backgroundColor: belt.bg, borderColor: belt.border }]}>
@@ -359,20 +359,20 @@ export default function PromoteScreen() {
             onPress={handleConfirm}
             disabled={!addressValid || isPending}
             accessibilityRole="button"
-            accessibilityLabel="Confirm Promotion"
+            accessibilityLabel="Issue Certificate"
             hitSlop={touchTarget.minHitSlop}
           >
             {isPending ? (
               <View style={styles.confirmButtonInner}>
                 <ActivityIndicator color={colors.onPrimary} size="small" />
-                <Text style={styles.confirmButtonText}>Minting SBT…</Text>
+                <Text style={styles.confirmButtonText}>Issuing Certificate…</Text>
               </View>
             ) : (
-              <Text style={styles.confirmButtonText}>Confirm Promotion</Text>
+              <Text style={styles.confirmButtonText}>Issue Certificate</Text>
             )}
           </Pressable>
 
-          <Text style={styles.gasNote}>Gasless · Sponsored via Thirdweb Paymaster · Base</Text>
+          <Text style={styles.gasNote}>Free to issue · Certificates secured by blockchain</Text>
 
         </ScrollView>
       </KeyboardAvoidingView>

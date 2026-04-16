@@ -91,30 +91,30 @@ export default function HomeScreen() {
             </View>
             <View>
               <Text style={styles.appName}>BitBelt</Text>
-              <Text style={styles.appSubtitle}>BJJ Verification Protocol</Text>
+              <Text style={styles.appSubtitle}>BJJ Certificate & Lineage Registry</Text>
             </View>
           </View>
 
           {/* ── Status card (Fintech-style data card) ── */}
           <View style={styles.statusCard}>
             <View style={styles.statusRow}>
-              <Text style={styles.statusLabel}>NETWORK</Text>
+              <Text style={styles.statusLabel}>SERVICE</Text>
               <View style={styles.statusBadge}>
                 <View style={styles.statusDot} />
-                <Text style={styles.statusBadgeText}>Base Sepolia</Text>
+                <Text style={styles.statusBadgeText}>Verified & Secure</Text>
               </View>
             </View>
 
             <View style={styles.divider} />
 
             <View style={styles.statusRow}>
-              <Text style={styles.statusLabel}>WALLET</Text>
+              <Text style={styles.statusLabel}>ACCOUNT</Text>
               {account ? (
                 <Text style={styles.statusValue} numberOfLines={1}>
                   {shortAddress}
                 </Text>
               ) : (
-                <Text style={styles.statusValueMuted}>Not connected</Text>
+                <Text style={styles.statusValueMuted}>Not signed in</Text>
               )}
             </View>
 
@@ -135,10 +135,10 @@ export default function HomeScreen() {
 
           {/* ── Feature pillars (2 × 2 grid, Fintech data tiles) ── */}
           <View style={styles.featureGrid}>
-            <FeatureTile value="ERC-721" label="Soulbound Token" />
-            <FeatureTile value="ERC-4337" label="Gasless Txns" />
-            <FeatureTile value="On-Chain" label="Belt Lineage" />
-            <FeatureTile value="Base" label="L2 Network" />
+            <FeatureTile value="Certified" label="Belt Records" />
+            <FeatureTile value="Free" label="No Fees Ever" />
+            <FeatureTile value="Permanent" label="Belt Lineage" />
+            <FeatureTile value="Verified" label="Tamper-Proof" />
           </View>
 
           {/* ── Auth / action section ── */}
@@ -211,7 +211,7 @@ export default function HomeScreen() {
                 )}
 
                 <Text style={styles.legalNote}>
-                  Gasless · Powered by Thirdweb AA · Base
+                  Free to use · Certificates secured by blockchain
                 </Text>
               </>
             ) : (
@@ -226,11 +226,11 @@ export default function HomeScreen() {
                     ]}
                     onPress={() => router.push("/modal")}
                     accessibilityRole="button"
-                    accessibilityLabel="Proceed to BitBelt Dashboard"
+                    accessibilityLabel="Go to My Certificates"
                     hitSlop={touchTarget.minHitSlop}
                   >
                     <Text style={styles.primaryButtonText}>
-                      Proceed to BitBelt Dashboard
+                      View My Certificates
                     </Text>
                   </Pressable>
                 )}
@@ -239,10 +239,10 @@ export default function HomeScreen() {
                   style={styles.secondaryButton}
                   onPress={handleDisconnect}
                   accessibilityRole="button"
-                  accessibilityLabel="Disconnect wallet"
+                  accessibilityLabel="Sign out"
                   hitSlop={touchTarget.minHitSlop}
                 >
-                  <Text style={styles.secondaryButtonText}>Disconnect</Text>
+                  <Text style={styles.secondaryButtonText}>Sign Out</Text>
                 </Pressable>
               </>
             )}

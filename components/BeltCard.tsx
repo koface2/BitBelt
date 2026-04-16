@@ -77,7 +77,7 @@ export default function BeltCard({
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.brand}>BitBelt</Text>
-            <Text style={styles.subBrand}>Blockchain BJJ Verification</Text>
+            <Text style={styles.subBrand}>BJJ Certification & Lineage</Text>
           </View>
           <View style={[styles.beltBadge, { backgroundColor: beltColor }]}>
             <Text style={[styles.beltBadgeText, { color: beltTextColor }]}>
@@ -102,7 +102,7 @@ export default function BeltCard({
         {/* Meta row: token ID + promotion date */}
         <View style={styles.metaRow}>
           <View style={styles.metaItem}>
-            <Text style={styles.labelSmall}>TOKEN ID</Text>
+            <Text style={styles.labelSmall}>CERTIFICATE ID</Text>
             <Text style={styles.metaValue} numberOfLines={1}>
               #{tokenId}
             </Text>
@@ -126,7 +126,7 @@ export default function BeltCard({
         {/* SBT verification pill */}
         <View style={styles.verifiedPill}>
           <View style={styles.verifiedDot} />
-          <Text style={styles.verifiedText}>Soulbound Token · Base Network</Text>
+          <Text style={styles.verifiedText}>Verified Certificate · Permanent Record</Text>
         </View>
       </View>
     </View>
