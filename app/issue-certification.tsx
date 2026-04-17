@@ -27,7 +27,6 @@ import {
   StatusBar,
   ActivityIndicator,
   Platform,
-  Switch,
   Linking,
   KeyboardAvoidingView,
   Modal,
@@ -46,6 +45,8 @@ import { prepareContractCall } from "thirdweb";
 
 import { Theme } from "@/constants/Theme";
 import { sbtContract, wallet } from "@/constants/BitBelt";
+import { useStudents } from "@/hooks/useStudents";
+import type { Student } from "@/hooks/useStudents";
 
 const { colors, spacing, typography, radius, shadow, touchTarget } = Theme;
 
@@ -94,26 +95,92 @@ export default function IssueCertificationScreen() {
   const { mutate: sendTx, isPending } = useSendTransaction();
   const { disconnect } = useDisconnect();
 
+  const { search } = useStudents();
+
   // ── Form state
-  const [studentAddress, setStudentAddress] = useState("");
+  // Student search
+  const [selectedStudent,  setSelectedStudent]  = useState<Student | null>(null);
+  const [nameQuery,        setNameQuery]         = useState("");
+  const [suggestions,      setSuggestions]       = useState<Student[]>([]);
+  const [showSuggestions,  setShowSuggestions]   = useState(false);
+
+  // Promoter ("who gave the rank") — free text + autocomplete from registry
+  const [promoterQuery,    setPromoterQuery]     = useState("");
+  const [promoterSelected, setPromoterSelected] = useState<Student | null>(null);
+  const [promoterSuggestions, setPromoterSuggestions] = useState<Student[]>([]);
+  const [showPromoterSugg, setShowPromoterSugg] = useState(false);
+
+  // "Certifying As" — admin override of on-chain instructorAddress (mintBeltAs)
+  const [certifyingAs,        setCertifyingAs]        = useState<Student | null>(null);
+  const [certifyingAsQuery,   setCertifyingAsQuery]   = useState("");
+  const [certifyingAsSugg,    setCertifyingAsSugg]    = useState<Student[]>([]);
+  const [showCertifyingAsSugg,setShowCertifyingAsSugg] = useState(false);
+
   const [selectedBelt, setSelectedBelt]     = useState<BeltColor>("Blue");
   const [effectiveDate, setEffectiveDate]   = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showBeltMenu, setShowBeltMenu]     = useState(false);
-
-  // Co-promoter
-  const [coPromoterEnabled, setCoPromoterEnabled] = useState(false);
-  const [coPromoterName, setCoPromoterName]       = useState("");
 
   // Success
   const [txHash, setTxHash] = useState<string | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
 
   // ── Derived
-  const addressTouched = studentAddress.length > 0;
+  const studentAddress = selectedStudent?.address ?? "";
   const addressValid   = isValidAddress(studentAddress);
   const belt           = BELTS.find((b) => b.label === selectedBelt)!;
   const canSubmit      = addressValid && !isPending;
+
+  // ── Student search handlers
+  const handleNameChange = (text: string) => {
+    setNameQuery(text);
+    setSelectedStudent(null);
+    const results = search(text);
+    setSuggestions(results);
+    setShowSuggestions(results.length > 0 && text.length > 0);
+  };
+  const handleSelectStudent = (s: Student) => {
+    setSelectedStudent(s);
+    setNameQuery(s.name);
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
+
+  // ── Promoter search handlers
+  const handlePromoterChange = (text: string) => {
+    setPromoterQuery(text);
+    setPromoterSelected(null);
+    const results = search(text);
+    setPromoterSuggestions(results);
+    setShowPromoterSugg(results.length > 0 && text.length > 0);
+  };
+  const handleSelectPromoter = (s: Student) => {
+    setPromoterSelected(s);
+    setPromoterQuery(s.name);
+    setPromoterSuggestions([]);
+    setShowPromoterSugg(false);
+  };
+
+  // ── "Certifying As" handlers
+  const handleCertifyingAsChange = (text: string) => {
+    setCertifyingAsQuery(text);
+    setCertifyingAs(null);
+    const results = search(text);
+    setCertifyingAsSugg(results);
+    setShowCertifyingAsSugg(results.length > 0 && text.length > 0);
+  };
+  const handleSelectCertifyingAs = (s: Student) => {
+    setCertifyingAs(s);
+    setCertifyingAsQuery(s.name);
+    setCertifyingAsSugg([]);
+    setShowCertifyingAsSugg(false);
+  };
+  const handleClearCertifyingAs = () => {
+    setCertifyingAs(null);
+    setCertifyingAsQuery("");
+    setCertifyingAsSugg([]);
+    setShowCertifyingAsSugg(false);
+  };
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -131,22 +198,34 @@ export default function IssueCertificationScreen() {
     if (!account || !addressValid) return;
     setTxError(null);
 
-    // "Grandfather" logic: JS Date → Unix timestamp (seconds).
-    // The contract rejects future timestamps, so cap to now.
     const officialTimestamp = BigInt(
       Math.floor(effectiveDate.getTime() / 1000)
     );
 
-    const tx = prepareContractCall({
-      contract: sbtContract,
-      method:
-        "function mintBelt(address student, string color, uint256 officialTimestamp) external returns (uint256 tokenId)",
-      params: [
-        studentAddress.trim() as `0x${string}`,
-        selectedBelt,
-        officialTimestamp,
-      ],
-    });
+    // If admin has chosen to certify as a specific instructor, use mintBeltAs
+    // so the on-chain instructorAddress reflects that wallet.
+    const tx = certifyingAs
+      ? prepareContractCall({
+          contract: sbtContract,
+          method:
+            "function mintBeltAs(address student, string color, uint256 officialTimestamp, address instructor) external returns (uint256 tokenId)",
+          params: [
+            studentAddress as `0x${string}`,
+            selectedBelt,
+            officialTimestamp,
+            certifyingAs.address,
+          ],
+        })
+      : prepareContractCall({
+          contract: sbtContract,
+          method:
+            "function mintBelt(address student, string color, uint256 officialTimestamp) external returns (uint256 tokenId)",
+          params: [
+            studentAddress as `0x${string}`,
+            selectedBelt,
+            officialTimestamp,
+          ],
+        });
 
     sendTx(tx, {
       onSuccess: (result) => {
@@ -159,11 +238,20 @@ export default function IssueCertificationScreen() {
   };
 
   const handleReset = () => {
-    setStudentAddress("");
+    setSelectedStudent(null);
+    setNameQuery("");
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setPromoterQuery("");
+    setPromoterSelected(null);
+    setPromoterSuggestions([]);
+    setShowPromoterSugg(false);
+    setCertifyingAs(null);
+    setCertifyingAsQuery("");
+    setCertifyingAsSugg([]);
+    setShowCertifyingAsSugg(false);
     setSelectedBelt("Blue");
     setEffectiveDate(new Date());
-    setCoPromoterEnabled(false);
-    setCoPromoterName("");
     setTxHash(null);
     setTxError(null);
   };
@@ -210,13 +298,17 @@ export default function IssueCertificationScreen() {
               </Text>
             </View>
             <Text style={styles.certRecipient}>
-              {studentAddress.trim().slice(0, 6)}…
-              {studentAddress.trim().slice(-4)}
+              {selectedStudent ? selectedStudent.name : studentAddress.slice(0, 6) + "…" + studentAddress.slice(-4)}
             </Text>
             <Text style={styles.certDate}>{formatDate(effectiveDate)}</Text>
-            {coPromoterEnabled && coPromoterName.length > 0 && (
+            {promoterQuery.length > 0 && (
               <Text style={styles.certCoPromoter}>
-                Co-promoted by {coPromoterName}
+                Promoted by {promoterQuery}
+              </Text>
+            )}
+            {certifyingAs && (
+              <Text style={styles.certCoPromoter}>
+                On-chain instructor: {certifyingAs.name}
               </Text>
             )}
           </View>
@@ -315,52 +407,148 @@ export default function IssueCertificationScreen() {
             <View style={styles.badge}>
               <View style={styles.badgeDot} />
               <Text style={styles.badgeText}>
-                Certifying as {account.address.slice(0, 6)}…
-                {account.address.slice(-4)}
+                Certifying as {certifyingAs ? certifyingAs.name : `${account.address.slice(0, 6)}…${account.address.slice(-4)}`}
               </Text>
             </View>
           )}
 
-          {/* ── Card: Student Wallet ─────────────────────────────────────── */}
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>Student Wallet</Text>
+          {/* ── Card: Certifying As (admin override) ─────────────────── */}
+          <View style={[styles.card, styles.adminCard]}>
+            <View style={styles.adminCardHeader}>
+              <Text style={styles.adminBadge}>⚙ ADMIN</Text>
+              <Text style={styles.cardLabel}>Certifying As</Text>
+            </View>
             <Text style={styles.cardHint}>
-              Blockchain address of the student receiving the rank
+              Override the on-chain instructor address. Leave blank to use your own wallet.
             </Text>
 
-            <View
-              style={[
-                styles.inputWrap,
-                addressTouched && !addressValid && styles.inputWrapError,
-                addressTouched && addressValid  && styles.inputWrapValid,
-              ]}
-            >
+            <View style={[styles.inputWrap, certifyingAs && styles.inputWrapValid]}>
               <TextInput
                 style={styles.input}
-                placeholder="0x…"
+                placeholder="Search instructor by name…"
                 placeholderTextColor={colors.gray500}
-                value={studentAddress}
-                onChangeText={setStudentAddress}
-                autoCapitalize="none"
+                value={certifyingAsQuery}
+                onChangeText={handleCertifyingAsChange}
                 autoCorrect={false}
-                keyboardType="default"
-                accessibilityLabel="Student wallet address"
-                returnKeyType="done"
+                autoCapitalize="words"
+                accessibilityLabel="Certify as instructor"
+                returnKeyType="search"
               />
-              {addressTouched && (
-                <View
-                  style={[
-                    styles.validDot,
-                    addressValid ? styles.validDotOk : styles.validDotErr,
-                  ]}
-                />
+              {certifyingAs && (
+                <Pressable onPress={handleClearCertifyingAs} hitSlop={touchTarget.minHitSlop}>
+                  <Text style={styles.clearBtn}>✕</Text>
+                </Pressable>
               )}
             </View>
 
-            {addressTouched && !addressValid && (
+            {showCertifyingAsSugg && (
+              <View style={styles.suggestionsBox}>
+                {certifyingAsSugg.map((s) => (
+                  <Pressable
+                    key={s.id}
+                    onPress={() => handleSelectCertifyingAs(s)}
+                    style={({ pressed }) => [
+                      styles.suggestionRow,
+                      pressed && styles.suggestionRowPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Certify as ${s.name}`}
+                  >
+                    <View style={styles.suggestionAvatar}>
+                      <Text style={styles.suggestionAvatarText}>
+                        {s.name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={styles.suggestionMeta}>
+                      <Text style={styles.suggestionName}>{s.name}</Text>
+                      <Text style={styles.suggestionAddress}>
+                        {s.address.slice(0, 8)}…{s.address.slice(-6)}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
+            {certifyingAs && (
+              <View style={styles.resolvedChip}>
+                <Text style={styles.resolvedChipLabel}>Wallet</Text>
+                <Text style={styles.resolvedChipValue} selectable numberOfLines={1}>
+                  {certifyingAs.address}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* ── Card: Student ─────────────────────────────────────────── */}
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>Student</Text>
+            <Text style={styles.cardHint}>
+              Search by name — add students in the Student Registry first
+            </Text>
+
+            <View style={[styles.inputWrap, selectedStudent && styles.inputWrapValid]}>
+              <TextInput
+                style={styles.input}
+                placeholder="Search student name…"
+                placeholderTextColor={colors.gray500}
+                value={nameQuery}
+                onChangeText={handleNameChange}
+                autoCorrect={false}
+                autoCapitalize="words"
+                accessibilityLabel="Student name search"
+                returnKeyType="search"
+              />
+              {selectedStudent && (
+                <View style={[styles.validDot, styles.validDotOk]} />
+              )}
+            </View>
+
+            {/* Autocomplete dropdown */}
+            {showSuggestions && (
+              <View style={styles.suggestionsBox}>
+                {suggestions.map((s) => (
+                  <Pressable
+                    key={s.id}
+                    onPress={() => handleSelectStudent(s)}
+                    style={({ pressed }) => [
+                      styles.suggestionRow,
+                      pressed && styles.suggestionRowPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select ${s.name}`}
+                  >
+                    <View style={styles.suggestionAvatar}>
+                      <Text style={styles.suggestionAvatarText}>
+                        {s.name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={styles.suggestionMeta}>
+                      <Text style={styles.suggestionName}>{s.name}</Text>
+                      <Text style={styles.suggestionAddress}>
+                        {s.address.slice(0, 8)}…{s.address.slice(-6)}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
+            {/* No results */}
+            {nameQuery.length > 0 && suggestions.length === 0 && !selectedStudent && (
               <Text style={styles.fieldError}>
-                Enter a valid Ethereum address (0x…)
+                No students found — add them in the Student Registry first.
               </Text>
+            )}
+
+            {/* Resolved address chip */}
+            {selectedStudent && (
+              <View style={styles.resolvedChip}>
+                <Text style={styles.resolvedChipLabel}>Wallet</Text>
+                <Text style={styles.resolvedChipValue} selectable numberOfLines={1}>
+                  {selectedStudent.address}
+                </Text>
+              </View>
             )}
           </View>
 
@@ -540,45 +728,57 @@ export default function IssueCertificationScreen() {
             )}
           </View>
 
-          {/* ── Card: Co-Promoter ────────────────────────────────────────── */}
+          {/* ── Card: Promoted By ────────────────────────────────────────── */}
           <View style={styles.card}>
-            <View style={styles.cardRowBetween}>
-              <View style={styles.coPromoLabelGroup}>
-                <Text style={styles.cardLabel}>Add Co-Promoter</Text>
-                <Text style={styles.cardHint}>
-                  Record a second instructor for this promotion
-                </Text>
-              </View>
-              <Switch
-                value={coPromoterEnabled}
-                onValueChange={(v) => {
-                  setCoPromoterEnabled(v);
-                  if (!v) setCoPromoterName("");
-                }}
-                trackColor={{
-                  false: colors.gray300,
-                  true:  colors.primaryLight,
-                }}
-                thumbColor={coPromoterEnabled ? colors.primary : colors.white}
-                ios_backgroundColor={colors.gray300}
-                accessibilityLabel="Toggle co-promoter"
-                accessibilityRole="switch"
+            <Text style={styles.cardLabel}>Promoted By</Text>
+            <Text style={styles.cardHint}>
+              Search a student name or type any instructor name — for display purposes
+            </Text>
+
+            <View style={[styles.inputWrap, promoterSelected && styles.inputWrapValid]}>
+              <TextInput
+                style={styles.input}
+                placeholder="Search or type instructor name…"
+                placeholderTextColor={colors.gray500}
+                value={promoterQuery}
+                onChangeText={handlePromoterChange}
+                autoCapitalize="words"
+                autoCorrect={false}
+                returnKeyType="done"
+                accessibilityLabel="Promoter name"
               />
+              {promoterSelected && (
+                <View style={[styles.validDot, styles.validDotOk]} />
+              )}
             </View>
 
-            {coPromoterEnabled && (
-              <View style={[styles.inputWrap, { marginTop: spacing.sm }]}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Co-promoter's full name"
-                  placeholderTextColor={colors.gray500}
-                  value={coPromoterName}
-                  onChangeText={setCoPromoterName}
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                  returnKeyType="done"
-                  accessibilityLabel="Co-promoter name"
-                />
+            {/* Autocomplete dropdown */}
+            {showPromoterSugg && (
+              <View style={styles.suggestionsBox}>
+                {promoterSuggestions.map((s) => (
+                  <Pressable
+                    key={s.id}
+                    onPress={() => handleSelectPromoter(s)}
+                    style={({ pressed }) => [
+                      styles.suggestionRow,
+                      pressed && styles.suggestionRowPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select ${s.name}`}
+                  >
+                    <View style={styles.suggestionAvatar}>
+                      <Text style={styles.suggestionAvatarText}>
+                        {s.name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={styles.suggestionMeta}>
+                      <Text style={styles.suggestionName}>{s.name}</Text>
+                      <Text style={styles.suggestionAddress}>
+                        {s.address.slice(0, 8)}…{s.address.slice(-6)}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
               </View>
             )}
           </View>
@@ -619,18 +819,28 @@ export default function IssueCertificationScreen() {
             <View style={styles.summaryRow}>
               <Text style={styles.summaryKey}>Recipient</Text>
               <Text style={styles.summaryVal} numberOfLines={1}>
-                {addressValid
-                  ? `${studentAddress.trim().slice(0, 6)}…${studentAddress.trim().slice(-4)}`
-                  : "—"}
+                {selectedStudent ? selectedStudent.name : "—"}
               </Text>
             </View>
 
-            {coPromoterEnabled && coPromoterName.length > 0 && (
+            {promoterQuery.length > 0 && (
               <>
                 <View style={styles.summaryDivider} />
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryKey}>Co-Promoter</Text>
-                  <Text style={styles.summaryVal}>{coPromoterName}</Text>
+                  <Text style={styles.summaryKey}>Promoted By</Text>
+                  <Text style={styles.summaryVal}>{promoterQuery}</Text>
+                </View>
+              </>
+            )}
+
+            {certifyingAs && (
+              <>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryKey}>On-Chain Instructor</Text>
+                  <Text style={[styles.summaryVal, styles.summaryValAdmin]} numberOfLines={1}>
+                    {certifyingAs.name}
+                  </Text>
                 </View>
               </>
             )}
@@ -787,6 +997,37 @@ const styles = StyleSheet.create({
     ...shadow.sm,
   },
 
+  // Admin override card — amber tint border
+  adminCard: {
+    borderColor:     colors.warning,
+    backgroundColor: colors.warningLight,
+  },
+  adminCardHeader: {
+    flexDirection: "row",
+    alignItems:    "center",
+    gap:           spacing.sm,
+  },
+  adminBadge: {
+    fontSize:          typography.size.xs,
+    fontWeight:        typography.weight.bold,
+    color:             colors.warning,
+    backgroundColor:   "#FEF3C7",
+    borderRadius:      radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical:   2,
+    letterSpacing:     0.5,
+    overflow:          "hidden",
+  },
+  clearBtn: {
+    fontSize:  typography.size.sm,
+    color:     colors.gray500,
+    paddingHorizontal: spacing.sm,
+  },
+  summaryValAdmin: {
+    color:      colors.warning,
+    fontWeight: typography.weight.semibold,
+  },
+
   cardLabel: {
     fontSize:      typography.size.sm,
     fontWeight:    typography.weight.semibold,
@@ -806,8 +1047,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap:            spacing.sm,
   },
-
-  coPromoLabelGroup: { flex: 1, gap: 2 },
 
   // ── Text input
   inputWrap: {
@@ -847,6 +1086,71 @@ const styles = StyleSheet.create({
     fontSize:   typography.size.xs,
     fontWeight: typography.weight.medium,
     color:      colors.error,
+  },
+
+  // ── Autocomplete dropdown
+  suggestionsBox: {
+    backgroundColor: colors.background,
+    borderRadius:    radius.md,
+    borderWidth:     1.5,
+    borderColor:     colors.gray300,
+    overflow:        "hidden",
+    ...shadow.sm,
+  },
+  suggestionRow: {
+    flexDirection:   "row",
+    alignItems:      "center",
+    gap:             spacing.md,
+    paddingVertical:  spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray100,
+  },
+  suggestionRowPressed: { backgroundColor: colors.primaryMuted },
+  suggestionAvatar: {
+    width: 34, height: 34,
+    borderRadius:    radius.full,
+    backgroundColor: colors.primaryMuted,
+    alignItems:      "center",
+    justifyContent:  "center",
+  },
+  suggestionAvatarText: {
+    fontSize:   typography.size.base,
+    fontWeight: typography.weight.bold,
+    color:      colors.primary,
+  },
+  suggestionMeta: { flex: 1 },
+  suggestionName: {
+    fontSize:   typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color:      colors.gray900,
+  },
+  suggestionAddress: {
+    fontSize:   typography.size.xs,
+    color:      colors.gray500,
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+  },
+  resolvedChip: {
+    flexDirection:     "row",
+    alignItems:        "center",
+    gap:               spacing.sm,
+    backgroundColor:   colors.successLight,
+    borderRadius:      radius.md,
+    paddingVertical:   spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
+  resolvedChipLabel: {
+    fontSize:      typography.size.xs,
+    fontWeight:    typography.weight.semibold,
+    color:         colors.success,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  resolvedChipValue: {
+    flex:       1,
+    fontSize:   typography.size.xs,
+    color:      colors.gray700,
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
   },
 
   // ── Belt dropdown trigger

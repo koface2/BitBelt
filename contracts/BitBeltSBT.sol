@@ -117,6 +117,34 @@ contract BitBeltSBT is ERC721, AccessControl {
         string memory color,
         uint256 officialTimestamp
     ) external onlyRole(INSTRUCTOR_ROLE) returns (uint256 tokenId) {
+        return _mintBeltInternal(student, color, officialTimestamp, msg.sender);
+    }
+
+    /**
+     * @notice Admin-only variant of mintBelt that lets DEFAULT_ADMIN_ROLE
+     *         specify the on-chain instructorAddress explicitly.
+     *         Intended for backdating / testing: allows an admin to record a
+     *         promotion as if it were issued by a specific instructor wallet.
+     * @param instructor  Address to record as the certifying instructor.
+     *                    Must not be zero address.
+     */
+    function mintBeltAs(
+        address student,
+        string memory color,
+        uint256 officialTimestamp,
+        address instructor
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (uint256 tokenId) {
+        require(instructor != address(0), "BitBeltSBT: instructor is zero address");
+        return _mintBeltInternal(student, color, officialTimestamp, instructor);
+    }
+
+    /// @dev Shared minting logic used by both mintBelt and mintBeltAs.
+    function _mintBeltInternal(
+        address student,
+        string memory color,
+        uint256 officialTimestamp,
+        address instructor
+    ) internal returns (uint256 tokenId) {
         require(student != address(0), "BitBeltSBT: mint to zero address");
         _validateBeltColor(color); // also rejects empty strings
 
@@ -137,13 +165,13 @@ contract BitBeltSBT is ERC721, AccessControl {
         _rankInfo[tokenId] = RankInfo({
             promotionDate:     promotionDate,
             beltColor:         color,
-            instructorAddress: msg.sender
+            instructorAddress: instructor
         });
         _studentTokens[student].push(tokenId);
 
         _safeMint(student, tokenId);
 
-        emit BeltMinted(tokenId, student, msg.sender, color, promotionDate);
+        emit BeltMinted(tokenId, student, instructor, color, promotionDate);
     }
 
     // ─────────────────────────────── Burn ───────────────────────────────────

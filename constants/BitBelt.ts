@@ -21,7 +21,7 @@ export const chain = baseSepolia;
 
 // ── Contract ──────────────────────────────────────────────────────────────
 export const SBT_CONTRACT_ADDRESS =
-  "0x28a5b84D8EcDdC3D9d750C78662dE3d82111Fca4" as const;
+  "0x958dBb461e039902113e65518eC64D3379fDF2e2" as const;
 
 export const sbtContract = getContract({
   client,

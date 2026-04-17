@@ -33,7 +33,7 @@ import {BitBeltSBT} from "../contracts/BitBeltSBT.sol";
  */
 contract GrantRoles is Script {
     // Deployed contract address on Base Sepolia
-    address constant SBT_CONTRACT = 0x28a5b84D8EcDdC3D9d750C78662dE3d82111Fca4;
+    address constant SBT_CONTRACT = 0x958dBb461e039902113e65518eC64D3379fDF2e2;
 
     bytes32 constant DEFAULT_ADMIN_ROLE = bytes32(0);
     bytes32 constant INSTRUCTOR_ROLE    = keccak256("INSTRUCTOR_ROLE");
