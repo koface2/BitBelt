@@ -35,6 +35,10 @@ export const sbtContract = getContract({
 export const INSTRUCTOR_ROLE =
   "0xae4a0595970935aa5495afbbb72e5f1f6ff1062766b4a3028c0c9b7d5cf7e345" as `0x${string}`;
 
+// OpenZeppelin AccessControl DEFAULT_ADMIN_ROLE is always bytes32(0).
+export const DEFAULT_ADMIN_ROLE =
+  "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`;
+
 // ── Shared wallet singleton ───────────────────────────────────────────────
 // Module-level so the same instance is reused across screens and AutoConnect.
 export const wallet = inAppWallet({

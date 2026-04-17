@@ -20,7 +20,7 @@ import { useRouter } from "expo-router";
 import { useActiveAccount, useDisconnect, useReadContract } from "thirdweb/react";
 
 import { Theme } from "@/constants/Theme";
-import { client, chain, sbtContract, INSTRUCTOR_ROLE, wallet } from "@/constants/BitBelt";
+import { client, chain, sbtContract, INSTRUCTOR_ROLE, DEFAULT_ADMIN_ROLE, wallet } from "@/constants/BitBelt";
 
 const { colors, spacing, typography, radius, shadow, touchTarget } = Theme;
 
@@ -93,6 +93,14 @@ export default function DashboardScreen() {
   const account = useActiveAccount();
   const { disconnect } = useDisconnect();
 
+  // Print full smart account address for admin copy-paste
+  React.useEffect(() => {
+    if (account?.address) {
+      // eslint-disable-next-line no-console
+      console.log("[BitBelt] Smart account address:", account.address);
+    }
+  }, [account?.address]);
+
   // On-chain instructor role check
   const { data: isInstructor } = useReadContract({
     contract: sbtContract,
@@ -103,6 +111,19 @@ export default function DashboardScreen() {
     ],
     queryOptions: { enabled: !!account },
   });
+
+  // On-chain admin role check (DEFAULT_ADMIN_ROLE = bytes32(0))
+  const { data: isAdmin } = useReadContract({
+    contract: sbtContract,
+    method: "function hasRole(bytes32 role, address account) view returns (bool)",
+    params: [
+      DEFAULT_ADMIN_ROLE,
+      (account?.address ?? "0x0000000000000000000000000000000000000000") as `0x${string}`,
+    ],
+    queryOptions: { enabled: !!account },
+  });
+
+  const hasInstructorAccess = isAdmin || isInstructor;
 
   const handleSignOut = () => {
     disconnect(wallet);
@@ -118,6 +139,22 @@ export default function DashboardScreen() {
   const shortAddress = account
     ? `${account.address.slice(0, 6)}…${account.address.slice(-4)}`
     : "";
+
+  // Full address for display
+  const fullAddress = account?.address ?? "";
+
+  // Copy to clipboard handler
+  const [copied, setCopied] = React.useState(false);
+  const handleCopy = async () => {
+    if (!fullAddress) return;
+    try {
+      await navigator.clipboard.writeText(fullAddress);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch (e) {
+      setCopied(false);
+    }
+  };
 
   // Split tiles: instructor-only vs public
   const instructorTiles = TILES.filter((t) => t.instructorOnly);
@@ -168,9 +205,40 @@ export default function DashboardScreen() {
           </View>
 
           <View style={styles.identityInfo}>
+            {/* Full address with copy button */}
+            <View className="flex-row items-center space-x-2 mb-1">
+              <Text
+                selectable
+                className="font-mono text-xs text-gray-700 dark:text-gray-200"
+                style={{ maxWidth: 220 }}
+                numberOfLines={1}
+                ellipsizeMode="middle"
+              >
+                {fullAddress}
+              </Text>
+              {fullAddress ? (
+                <Pressable
+                  onPress={handleCopy}
+                  className="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600"
+                  style={{ minWidth: 36 }}
+                  accessibilityLabel="Copy address"
+                  accessibilityRole="button"
+                >
+                  <Text className="text-xs text-gray-800 dark:text-gray-100">
+                    {copied ? "Copied!" : "Copy"}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+            {/* Short address below for visual continuity */}
             <Text style={styles.identityAddress}>{shortAddress}</Text>
             <View style={styles.rolePill}>
-              {isInstructor ? (
+              {isAdmin ? (
+                <>
+                  <View style={styles.roleDot} />
+                  <Text style={styles.rolePillText}>Admin</Text>
+                </>
+              ) : isInstructor ? (
                 <>
                   <View style={styles.roleDot} />
                   <Text style={styles.rolePillText}>Instructor</Text>
@@ -192,10 +260,12 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* ── Instructor actions ────────────────────────────────────────── */}
-        {isInstructor && (
+        {/* ── Instructor / Admin actions ─────────────────────────────────── */}
+        {hasInstructorAccess && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Instructor Tools</Text>
+            <Text style={styles.sectionLabel}>
+              {isAdmin ? "Admin & Instructor Tools" : "Instructor Tools"}
+            </Text>
 
             {instructorTiles.map((tile) => (
               <NavTileCard
