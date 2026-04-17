@@ -6,7 +6,7 @@
  * by the contract's officialTimestamp parameter).
  */
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -29,6 +29,8 @@ import { useActiveAccount, useDisconnect, useSendTransaction } from "thirdweb/re
 import { prepareContractCall } from "thirdweb";
 import { Theme } from "@/constants/Theme";
 import { chain, sbtContract, wallet } from "@/constants/BitBelt";
+import { useStudents } from "@/hooks/useStudents";
+import type { Student } from "@/hooks/useStudents";
 
 const { colors, spacing, typography, radius, shadow, touchTarget } = Theme;
 
@@ -62,6 +64,7 @@ export default function PromoteScreen() {
   const account = useActiveAccount();
   const { mutate: sendTx, isPending } = useSendTransaction();
   const { disconnect } = useDisconnect();
+  const { search } = useStudents();
 
   const handleSignOut = () => {
     disconnect(wallet);
@@ -69,13 +72,33 @@ export default function PromoteScreen() {
   };
 
   // ── Form state ──────────────────────────────────────────────────────────────
-  const [studentAddress, setStudentAddress] = useState("");
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [nameQuery, setNameQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<Student[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedBelt, setSelectedBelt] = useState<BeltColor>("Blue");
   const [promotionDate, setPromotionDate] = useState<Date>(new Date());
   const [showPicker, setShowPicker] = useState(false);
 
+  const studentAddress = selectedStudent?.address ?? "";
+
+  // ── Student search handlers ──────────────────────────────────────────────────
+  const handleNameChange = (text: string) => {
+    setNameQuery(text);
+    setSelectedStudent(null);
+    const results = search(text);
+    setSuggestions(results);
+    setShowSuggestions(results.length > 0 && text.length > 0);
+  };
+
+  const handleSelectStudent = (student: Student) => {
+    setSelectedStudent(student);
+    setNameQuery(student.name);
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
+
   // ── Address validation ───────────────────────────────────────────────────────
-  const addressTouched = studentAddress.length > 0;
   const addressValid = isValidAddress(studentAddress);
 
   // ── Date picker handler ──────────────────────────────────────────────────────
@@ -163,34 +186,73 @@ export default function PromoteScreen() {
             </View>
           )}
 
-          {/* ── Student Wallet ── */}
+          {/* ── Student Search ── */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>RECIPIENT</Text>
-            <View
-              style={[
-                styles.inputContainer,
-                addressTouched && !addressValid && styles.inputContainerError,
-                addressTouched && addressValid && styles.inputContainerValid,
-              ]}
-            >
+
+            {/* Name search input */}
+            <View style={[styles.inputContainer, selectedStudent && styles.inputContainerValid]}>
               <TextInput
                 style={styles.input}
-                placeholder="0x..."
+                placeholder="Search student name…"
                 placeholderTextColor={colors.gray500}
-                value={studentAddress}
-                onChangeText={setStudentAddress}
-                autoCapitalize="none"
+                value={nameQuery}
+                onChangeText={handleNameChange}
                 autoCorrect={false}
-                keyboardType="default"
-                accessibilityLabel="Student wallet address"
-                returnKeyType="done"
+                autoCapitalize="words"
+                accessibilityLabel="Student name search"
+                returnKeyType="search"
               />
-              {addressTouched && (
-                <View style={[styles.validationDot, addressValid ? styles.validationDotOk : styles.validationDotError]} />
+              {selectedStudent && (
+                <View style={[styles.validationDot, styles.validationDotOk]} />
               )}
             </View>
-            {addressTouched && !addressValid && (
-              <Text style={styles.fieldError}>Enter a valid recipient address</Text>
+
+            {/* Autocomplete dropdown */}
+            {showSuggestions && (
+              <View style={styles.suggestionsBox}>
+                {suggestions.map((s) => (
+                  <Pressable
+                    key={s.id}
+                    onPress={() => handleSelectStudent(s)}
+                    style={({ pressed }) => [
+                      styles.suggestionRow,
+                      pressed && styles.suggestionRowPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select ${s.name}`}
+                  >
+                    <View style={styles.suggestionAvatar}>
+                      <Text style={styles.suggestionAvatarText}>
+                        {s.name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={styles.suggestionMeta}>
+                      <Text style={styles.suggestionName}>{s.name}</Text>
+                      <Text style={styles.suggestionAddress}>
+                        {s.address.slice(0, 8)}…{s.address.slice(-6)}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
+            {/* No results hint */}
+            {nameQuery.length > 0 && suggestions.length === 0 && !selectedStudent && (
+              <Text style={styles.fieldError}>
+                No students found — add them in the Students registry first.
+              </Text>
+            )}
+
+            {/* Resolved wallet address chip */}
+            {selectedStudent && (
+              <View style={styles.resolvedAddress}>
+                <Text style={styles.resolvedAddressLabel}>Wallet</Text>
+                <Text style={styles.resolvedAddressValue} selectable numberOfLines={1}>
+                  {selectedStudent.address}
+                </Text>
+              </View>
             )}
           </View>
 
@@ -348,9 +410,7 @@ export default function PromoteScreen() {
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Student</Text>
               <Text style={styles.summaryValue} numberOfLines={1}>
-                {addressValid
-                  ? `${studentAddress.trim().slice(0, 6)}…${studentAddress.trim().slice(-4)}`
-                  : "—"}
+                {selectedStudent ? selectedStudent.name : "—"}
               </Text>
             </View>
           </View>
@@ -499,6 +559,72 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs,
     color: colors.error,
     fontWeight: typography.weight.medium,
+  },
+
+  // ── Student autocomplete ──
+  suggestionsBox: {
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.gray300,
+    overflow: "hidden",
+    ...shadow.sm,
+  },
+  suggestionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray100,
+  },
+  suggestionRowPressed: {
+    backgroundColor: colors.primaryMuted,
+  },
+  suggestionAvatar: {
+    width: 36, height: 36,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryMuted,
+    alignItems: "center", justifyContent: "center",
+  },
+  suggestionAvatarText: {
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.bold,
+    color: colors.primary,
+  },
+  suggestionMeta: { flex: 1 },
+  suggestionName: {
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.gray900,
+  },
+  suggestionAddress: {
+    fontSize: typography.size.xs,
+    color: colors.gray500,
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+  },
+  resolvedAddress: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.successLight,
+    borderRadius: radius.md,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
+  resolvedAddressLabel: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.semibold,
+    color: colors.success,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  resolvedAddressValue: {
+    flex: 1,
+    fontSize: typography.size.xs,
+    color: colors.gray700,
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
   },
 
   // ── Text input ──

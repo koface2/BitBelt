@@ -57,6 +57,14 @@ const TILES: NavTile[] = [
     instructorOnly: true,
   },
   {
+    id: "students",
+    icon: "👥",
+    title: "Manage Students",
+    description: "Add students to the registry and generate test accounts for the promotion flow.",
+    route: "/students",
+    instructorOnly: true,
+  },
+  {
     id: "my-certs",
     icon: "🏅",
     title: "My Certificates",
