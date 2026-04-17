@@ -23,8 +23,92 @@ import { useRouter } from "expo-router";
 import { Theme } from "@/constants/Theme";
 import { useStudents, generateRandomAddress } from "@/hooks/useStudents";
 import type { Student } from "@/hooks/useStudents";
+import StudentHoverCard from "@/components/StudentHoverCard";
 
 const { colors, spacing, typography, radius, shadow, touchTarget } = Theme;
+
+// ── StudentHoverRow sub-component ─────────────────────────────────────────────
+// Extracted so each row has its own hover state and the StudentHoverCard
+// (which has useReadContract hooks) only mounts per-row.
+
+interface RowProps {
+  student:  Student;
+  copied:   string | null;
+  onPress:  () => void;
+  onDelete: () => void;
+  onCopy:   (addr: string) => void;
+}
+
+function StudentHoverRow({ student, copied, onPress, onDelete, onCopy }: RowProps) {
+  const [hovered, setHovered] = useState(false);
+  const router = useRouter();
+
+  return (
+    <View
+      style={[styles.hoverWrapper, hovered && styles.hoverWrapperActive]}
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+    >
+      {/* ── Tappable row ── */}
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`View ${student.name}'s profile`}
+        style={({ pressed }) => [
+          styles.studentRow,
+          pressed && styles.studentRowPressed,
+          hovered && styles.studentRowHovered,
+        ]}
+      >
+        <View style={styles.studentAvatar}>
+          <Text style={styles.studentAvatarText}>
+            {student.name.charAt(0).toUpperCase()}
+          </Text>
+        </View>
+
+        <View style={styles.studentInfo}>
+          <Text style={[styles.studentName, hovered && styles.studentNameHovered]}>
+            {student.name}
+          </Text>
+          <Pressable
+            onPress={(e) => { e.stopPropagation?.(); onCopy(student.address); }}
+            accessibilityLabel="Copy address"
+          >
+            <Text style={styles.studentAddress}>
+              {copied === student.address ? "Copied!" : short(student.address)}
+            </Text>
+          </Pressable>
+        </View>
+
+        <Text style={styles.rowChevron}>›</Text>
+
+        <Pressable
+          onPress={(e) => { e.stopPropagation?.(); onDelete(); }}
+          hitSlop={touchTarget.minHitSlop}
+          accessibilityRole="button"
+          accessibilityLabel={`Remove ${student.name}`}
+          style={({ pressed }) => [
+            styles.deleteBtn,
+            pressed && styles.deleteBtnPressed,
+          ]}
+        >
+          <Text style={styles.deleteBtnText}>✕</Text>
+        </Pressable>
+      </Pressable>
+
+      {/* ── Hover card — only mounts on web when hovered ── */}
+      {hovered && (
+        <StudentHoverCard
+          student={student}
+          onViewProfile={() => {
+            setHovered(false);
+            router.push(`/student-profile/${student.id}`);
+          }}
+        />
+      )}
+    </View>
+  );
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -224,49 +308,14 @@ export default function StudentsScreen() {
             [...students]
               .sort((a, b) => a.name.localeCompare(b.name))
               .map((student) => (
-                <Pressable
+                <StudentHoverRow
                   key={student.id}
+                  student={student}
+                  copied={copied}
                   onPress={() => router.push(`/student-profile/${student.id}`)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`View ${student.name}'s profile`}
-                  style={({ pressed }) => [
-                    styles.studentRow,
-                    pressed && styles.studentRowPressed,
-                  ]}
-                >
-                  <View style={styles.studentAvatar}>
-                    <Text style={styles.studentAvatarText}>
-                      {student.name.charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
-
-                  <View style={styles.studentInfo}>
-                    <Text style={styles.studentName}>{student.name}</Text>
-                    <Pressable
-                      onPress={() => handleCopy(student.address)}
-                      accessibilityLabel="Copy address"
-                    >
-                      <Text style={styles.studentAddress}>
-                        {copied === student.address ? "Copied!" : short(student.address)}
-                      </Text>
-                    </Pressable>
-                  </View>
-
-                  <Text style={styles.rowChevron}>›</Text>
-
-                  <Pressable
-                    onPress={() => handleDelete(student)}
-                    hitSlop={touchTarget.minHitSlop}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Remove ${student.name}`}
-                    style={({ pressed }) => [
-                      styles.deleteBtn,
-                      pressed && styles.deleteBtnPressed,
-                    ]}
-                  >
-                    <Text style={styles.deleteBtnText}>✕</Text>
-                  </Pressable>
-                </Pressable>
+                  onDelete={() => handleDelete(student)}
+                  onCopy={handleCopy}
+                />
               ))
           )}
         </View>
@@ -449,24 +498,41 @@ const styles = StyleSheet.create({
     maxWidth: 260,
   },
 
+  // ── Hover wrapper (positions hover card above the row) ──
+  hoverWrapper: {
+    position: "relative",
+    zIndex:   1,
+  },
+  hoverWrapperActive: {
+    zIndex: 1000,
+  },
+
   // ── Student row ──
   studentRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
+    alignItems:    "center",
+    gap:           spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.md,
+    borderRadius:  radius.lg,
+    padding:       spacing.md,
     ...shadow.sm,
+  },
+  studentRowHovered: {
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryMuted,
   },
   studentRowPressed: {
     backgroundColor: colors.primaryMuted,
   },
   rowChevron: {
-    fontSize: 20,
-    color: colors.gray500,
+    fontSize:   20,
+    color:      colors.gray500,
     fontWeight: typography.weight.bold,
     marginRight: -spacing.xs,
+  },
+  studentNameHovered: {
+    color: colors.primary,
   },
   studentAvatar: {
     width: 40, height: 40,
