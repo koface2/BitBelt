@@ -21,9 +21,7 @@ import {
   Alert,
   KeyboardAvoidingView,
 } from "react-native";
-import DateTimePicker, {
-  DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
+import DateStepPicker from "@/components/DateStepPicker";
 import { useRouter } from "expo-router";
 import { useActiveAccount, useDisconnect, useSendTransaction } from "thirdweb/react";
 import { prepareContractCall } from "thirdweb";
@@ -79,6 +77,7 @@ export default function PromoteScreen() {
   const [selectedBelt, setSelectedBelt] = useState<BeltColor>("Blue");
   const [promotionDate, setPromotionDate] = useState<Date>(new Date());
   const [showPicker, setShowPicker] = useState(false);
+  const today = new Date();
 
   const studentAddress = selectedStudent?.address ?? "";
 
@@ -100,12 +99,6 @@ export default function PromoteScreen() {
 
   // ── Address validation ───────────────────────────────────────────────────────
   const addressValid = isValidAddress(studentAddress);
-
-  // ── Date picker handler ──────────────────────────────────────────────────────
-  const onDateChange = (_event: DateTimePickerEvent, date?: Date) => {
-    if (Platform.OS === "android") setShowPicker(false);
-    if (date) setPromotionDate(date);
-  };
 
   // ── Mint handler ─────────────────────────────────────────────────────────────
   const handleConfirm = () => {
@@ -161,6 +154,15 @@ export default function PromoteScreen() {
 
           {/* ── Header ── */}
           <View style={styles.header}>
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={touchTarget.minHitSlop}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+            >
+              <Text style={styles.iconButtonText}>←</Text>
+            </Pressable>
             <View style={styles.headerText}>
               <Text style={styles.screenTitle}>Issue Certificate</Text>
               <Text style={styles.screenSubtitle}>BELT PROMOTION</Text>
@@ -170,9 +172,9 @@ export default function PromoteScreen() {
               hitSlop={touchTarget.minHitSlop}
               accessibilityRole="button"
               accessibilityLabel="Sign out"
-              style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
+              style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
             >
-              <Text style={styles.backIcon}>Sign Out</Text>
+              <Text style={styles.signOutText}>Sign Out</Text>
             </Pressable>
           </View>
 
@@ -331,63 +333,13 @@ export default function PromoteScreen() {
               </View>
             </Pressable>
 
-            {/* iOS inline picker */}
-            {showPicker && Platform.OS === "ios" && (
-              <View style={styles.pickerCard}>
-                <DateTimePicker
-                  value={promotionDate}
-                  mode="date"
-                  display="spinner"
-                  maximumDate={new Date()}
-                  onChange={onDateChange}
-                  textColor={colors.gray900}
-                />
-                <Pressable
-                  style={styles.pickerDoneButton}
-                  onPress={() => setShowPicker(false)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Confirm date"
-                >
-                  <Text style={styles.pickerDoneText}>Confirm Date</Text>
-                </Pressable>
-              </View>
-            )}
-
-            {/* Android picker (modal-style) */}
-            {showPicker && Platform.OS === "android" && (
-              <DateTimePicker
-                value={promotionDate}
-                mode="date"
-                display="default"
-                maximumDate={new Date()}
-                onChange={onDateChange}
-              />
-            )}
-
-            {/* Web fallback */}
-            {showPicker && Platform.OS === "web" && (
-              <View style={styles.pickerCard}>
-                <input
-                  type="date"
-                  value={promotionDate.toISOString().split("T")[0]}
-                  max={new Date().toISOString().split("T")[0]}
-                  onChange={(e) => {
-                    if (e.target.value) setPromotionDate(new Date(e.target.value + "T12:00:00"));
-                    setShowPicker(false);
-                  }}
-                  style={{
-                    fontSize: 16,
-                    padding: 12,
-                    borderRadius: radius.md,
-                    border: `1px solid ${colors.gray300}`,
-                    color: colors.gray900,
-                    backgroundColor: colors.background,
-                    width: "100%",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </View>
-            )}
+            <DateStepPicker
+              visible={showPicker}
+              value={promotionDate}
+              maximumDate={today}
+              onConfirm={(d) => setPromotionDate(d)}
+              onClose={() => setShowPicker(false)}
+            />
           </View>
 
           {/* ── Summary card ── */}
@@ -470,7 +422,7 @@ const styles = StyleSheet.create({
     gap: spacing.base,
   },
 
-  backButton: {
+  iconButton: {
     width: 44,
     height: 44,
     borderRadius: radius.md,
@@ -481,17 +433,24 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  backButtonPressed: {
+  iconButtonPressed: {
     backgroundColor: colors.surfaceAlt,
   },
 
-  backIcon: {
+  iconButtonText: {
     fontSize: typography.size.lg,
     color: colors.gray900,
     fontWeight: typography.weight.bold,
   },
 
+  signOutText: {
+    fontSize: typography.size.xs,
+    color: colors.gray700,
+    fontWeight: typography.weight.semibold,
+  },
+
   headerText: {
+    flex: 1,
     gap: 2,
   },
 
@@ -796,30 +755,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
-  pickerCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    overflow: "hidden",
-    ...shadow.md,
-  },
 
-  pickerDoneButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.base,
-    alignItems: "center",
-    margin: spacing.base,
-    borderRadius: radius.lg,
-    minHeight: 48,
-    justifyContent: "center",
-  },
-
-  pickerDoneText: {
-    fontSize: typography.size.base,
-    fontWeight: typography.weight.semibold,
-    color: colors.onPrimary,
-  },
 
   // ── Summary card ──
   summaryCard: {

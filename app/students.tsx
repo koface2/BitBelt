@@ -224,7 +224,16 @@ export default function StudentsScreen() {
             [...students]
               .sort((a, b) => a.name.localeCompare(b.name))
               .map((student) => (
-                <View key={student.id} style={styles.studentRow}>
+                <Pressable
+                  key={student.id}
+                  onPress={() => router.push(`/student-profile/${student.id}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`View ${student.name}'s profile`}
+                  style={({ pressed }) => [
+                    styles.studentRow,
+                    pressed && styles.studentRowPressed,
+                  ]}
+                >
                   <View style={styles.studentAvatar}>
                     <Text style={styles.studentAvatarText}>
                       {student.name.charAt(0).toUpperCase()}
@@ -243,6 +252,8 @@ export default function StudentsScreen() {
                     </Pressable>
                   </View>
 
+                  <Text style={styles.rowChevron}>›</Text>
+
                   <Pressable
                     onPress={() => handleDelete(student)}
                     hitSlop={touchTarget.minHitSlop}
@@ -255,7 +266,7 @@ export default function StudentsScreen() {
                   >
                     <Text style={styles.deleteBtnText}>✕</Text>
                   </Pressable>
-                </View>
+                </Pressable>
               ))
           )}
         </View>
@@ -447,6 +458,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.md,
     ...shadow.sm,
+  },
+  studentRowPressed: {
+    backgroundColor: colors.primaryMuted,
+  },
+  rowChevron: {
+    fontSize: 20,
+    color: colors.gray500,
+    fontWeight: typography.weight.bold,
+    marginRight: -spacing.xs,
   },
   studentAvatar: {
     width: 40, height: 40,

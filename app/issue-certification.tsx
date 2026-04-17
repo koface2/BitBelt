@@ -32,9 +32,7 @@ import {
   Modal,
   TouchableWithoutFeedback,
 } from "react-native";
-import DateTimePicker, {
-  DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
+import DateStepPicker from "@/components/DateStepPicker";
 import { useRouter } from "expo-router";
 import {
   useActiveAccount,
@@ -189,10 +187,7 @@ export default function IssueCertificationScreen() {
     router.replace("/(tabs)");
   };
 
-  const onDateChange = (_event: DateTimePickerEvent, date?: Date) => {
-    if (Platform.OS === "android") setShowDatePicker(false);
-    if (date) setEffectiveDate(date);
-  };
+  const today = new Date();
 
   const handleIssue = () => {
     if (!account || !addressValid) return;
@@ -668,64 +663,13 @@ export default function IssueCertificationScreen() {
               <Text style={styles.dateChevron}>›</Text>
             </Pressable>
 
-            {/* iOS inline spinner */}
-            {showDatePicker && Platform.OS === "ios" && (
-              <View style={styles.pickerWrap}>
-                <DateTimePicker
-                  value={effectiveDate}
-                  mode="date"
-                  display="spinner"
-                  maximumDate={new Date()}
-                  onChange={onDateChange}
-                  textColor={colors.gray900}
-                />
-                <Pressable
-                  style={styles.pickerConfirm}
-                  onPress={() => setShowDatePicker(false)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Confirm date selection"
-                >
-                  <Text style={styles.pickerConfirmText}>Confirm</Text>
-                </Pressable>
-              </View>
-            )}
-
-            {/* Android modal picker */}
-            {showDatePicker && Platform.OS === "android" && (
-              <DateTimePicker
-                value={effectiveDate}
-                mode="date"
-                display="default"
-                maximumDate={new Date()}
-                onChange={onDateChange}
-              />
-            )}
-
-            {/* Web native date input */}
-            {showDatePicker && Platform.OS === "web" && (
-              <View style={styles.pickerWrap}>
-                <input
-                  type="date"
-                  value={effectiveDate.toISOString().split("T")[0]}
-                  max={new Date().toISOString().split("T")[0]}
-                  onChange={(e) => {
-                    if (e.target.value)
-                      setEffectiveDate(new Date(e.target.value + "T12:00:00"));
-                    setShowDatePicker(false);
-                  }}
-                  style={{
-                    fontSize: 16,
-                    padding: 12,
-                    borderRadius: radius.md,
-                    border: `1px solid ${colors.gray300}`,
-                    color: colors.gray900,
-                    backgroundColor: colors.background,
-                    width: "100%",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </View>
-            )}
+            <DateStepPicker
+              visible={showDatePicker}
+              value={effectiveDate}
+              maximumDate={today}
+              onConfirm={(d) => setEffectiveDate(d)}
+              onClose={() => setShowDatePicker(false)}
+            />
           </View>
 
           {/* ── Card: Promoted By ────────────────────────────────────────── */}
