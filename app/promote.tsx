@@ -60,9 +60,9 @@ function formatDate(d: Date): string {
 export default function PromoteScreen() {
   const router = useRouter();
   const account = useActiveAccount();
+  const { search } = useStudents(account?.address);
   const { mutate: sendTx, isPending } = useSendTransaction();
   const { disconnect } = useDisconnect();
-  const { search } = useStudents();
 
   const handleSignOut = () => {
     disconnect(wallet);

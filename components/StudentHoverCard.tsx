@@ -23,6 +23,7 @@ import { useReadContract } from "thirdweb/react";
 import { Theme } from "@/constants/Theme";
 import { sbtContract } from "@/constants/BitBelt";
 import BeltVisual from "@/components/BeltVisual";
+import MiniLineageChain from "@/components/MiniLineageChain";
 import type { Student } from "@/hooks/useStudents";
 
 const { colors, spacing, typography, radius, shadow } = Theme;
@@ -80,6 +81,14 @@ function BeltFetch({ address, onViewProfile }: BeltFetchProps) {
           </View>
         )}
       </View>
+
+      {/* ── Mini lineage chain ── */}
+      {!isLoading && tokenIds && tokenIds.length > 1 && (
+        <View style={styles.miniLineageWrap}>
+          <View style={styles.miniDivider} />
+          <MiniLineageChain tokenIds={tokenIds} />
+        </View>
+      )}
 
       {/* ── Action button ── */}
       <Pressable
@@ -278,5 +287,15 @@ const styles = StyleSheet.create({
     fontWeight: typography.weight.bold,
     color:      colors.onPrimary,
     letterSpacing: 0.3,
+  },
+
+  // ── Mini lineage ──
+  miniLineageWrap: {
+    gap: spacing.xs,
+  },
+  miniDivider: {
+    height:          1,
+    backgroundColor: colors.gray100,
+    marginBottom:    spacing.xs,
   },
 });

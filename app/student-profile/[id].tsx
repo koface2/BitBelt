@@ -21,11 +21,12 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useReadContract } from "thirdweb/react";
+import { useActiveAccount, useReadContract } from "thirdweb/react";
 import { Theme } from "@/constants/Theme";
 import { sbtContract } from "@/constants/BitBelt";
 import { useStudents } from "@/hooks/useStudents";
 import BeltVisual from "@/components/BeltVisual";
+import LineageTree from "@/components/LineageTree";
 
 const { colors, spacing, typography, radius, shadow, touchTarget } = Theme;
 
@@ -116,7 +117,8 @@ function BeltEntryCard({ tokenId, isLatest }: EntryProps) {
 export default function StudentProfileScreen() {
   const { id }       = useLocalSearchParams<{ id: string }>();
   const router       = useRouter();
-  const { students } = useStudents();
+  const account      = useActiveAccount();
+  const { students } = useStudents(account?.address);
 
   const student = students.find((s) => s.id === id);
 
@@ -184,6 +186,11 @@ export default function StudentProfileScreen() {
                 </Text>
               </View>
             </View>
+
+            {/* ── Belt Lineage Tree ── */}
+            {!lineageLoading && !lineageError && tokenIds && tokenIds.length > 0 && (
+              <LineageTree tokenIds={tokenIds} />
+            )}
 
             {/* ── Belt History ── */}
             <View>

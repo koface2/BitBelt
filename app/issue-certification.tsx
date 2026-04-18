@@ -90,10 +90,10 @@ function truncateTx(hash: string): string {
 export default function IssueCertificationScreen() {
   const router = useRouter();
   const account = useActiveAccount();
+  const { search } = useStudents(account?.address);
   const { mutate: sendTx, isPending } = useSendTransaction();
   const { disconnect } = useDisconnect();
 
-  const { search } = useStudents();
 
   // ── Form state
   // Student search

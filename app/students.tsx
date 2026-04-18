@@ -20,6 +20,7 @@ import {
   Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useActiveAccount } from "thirdweb/react";
 import { Theme } from "@/constants/Theme";
 import { useStudents, generateRandomAddress } from "@/hooks/useStudents";
 import type { Student } from "@/hooks/useStudents";
@@ -124,7 +125,8 @@ function isValidAddress(addr: string): boolean {
 
 export default function StudentsScreen() {
   const router = useRouter();
-  const { students, addStudent, removeStudent } = useStudents();
+  const account = useActiveAccount();
+  const { students, addStudent, removeStudent } = useStudents(account?.address);
 
   // ── Add form state ──────────────────────────────────────────────────────────
   const [name, setName] = useState("");

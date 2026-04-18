@@ -1,12 +1,17 @@
 /**
- * useStudents — Student registry backed by localStorage (web) or in-memory (native).
+ * useStudents — Student registry persisted via AsyncStorage (native) or
+ * localStorage (web), namespaced per connected wallet address.
  *
- * Students are stored as JSON at localStorage key "bitbelt_students".
- * The hook re-renders all consumers whenever the list changes.
+ * Storage key format: "bitbelt_students:<walletAddress>"
+ * Falls back to "bitbelt_students:guest" when no wallet is connected.
+ *
+ * All hook instances sharing the same walletAddress stay in sync via a
+ * module-level pub/sub channel keyed by walletAddress.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -17,39 +22,53 @@ export interface Student {
   createdAt: number; // unix ms
 }
 
-// ── Storage helpers ───────────────────────────────────────────────────────────
+// ── Storage key ───────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = "bitbelt_students";
+function storageKey(walletAddress: string): string {
+  return `bitbelt_students:${walletAddress.toLowerCase()}`;
+}
 
-function load(): Student[] {
+// ── Cross-platform load / save ────────────────────────────────────────────────
+
+async function loadAsync(walletAddress: string): Promise<Student[]> {
   try {
     if (Platform.OS === "web" && typeof localStorage !== "undefined") {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(storageKey(walletAddress));
       return raw ? (JSON.parse(raw) as Student[]) : [];
     }
+    const raw = await AsyncStorage.getItem(storageKey(walletAddress));
+    return raw ? (JSON.parse(raw) as Student[]) : [];
   } catch {
-    // ignore
+    return [];
   }
-  return _memCache;
 }
 
-function save(students: Student[]): void {
-  _memCache = students;
+async function saveAsync(walletAddress: string, students: Student[]): Promise<void> {
   try {
+    const json = JSON.stringify(students);
     if (Platform.OS === "web" && typeof localStorage !== "undefined") {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
+      localStorage.setItem(storageKey(walletAddress), json);
+    } else {
+      await AsyncStorage.setItem(storageKey(walletAddress), json);
     }
   } catch {
-    // ignore
+    // ignore write errors
   }
-  // Notify all subscribed hooks
-  _listeners.forEach((fn) => fn(students));
+  // Notify all subscribed hook instances for this wallet
+  _listeners.get(walletAddress.toLowerCase())?.forEach((fn) => fn(students));
 }
 
-// Module-level in-memory cache + pub/sub so all hook instances stay in sync
-let _memCache: Student[] = load();
+// ── Module-level pub/sub (per wallet) ────────────────────────────────────────
+
 type Listener = (students: Student[]) => void;
-const _listeners = new Set<Listener>();
+const _listeners = new Map<string, Set<Listener>>();
+
+function subscribe(walletAddress: string, fn: Listener): () => void {
+  const key = walletAddress.toLowerCase();
+  if (!_listeners.has(key)) _listeners.set(key, new Set());
+  _listeners.get(key)!.add(fn);
+  return () => _listeners.get(key)?.delete(fn);
+}
 
 // ── Random wallet generator ────────────────────────────────────────────────────
 
@@ -58,7 +77,6 @@ export function generateRandomAddress(): `0x${string}` {
   if (typeof crypto !== "undefined" && crypto.getRandomValues) {
     crypto.getRandomValues(bytes);
   } else {
-    // fallback for environments without Web Crypto
     for (let i = 0; i < 20; i++) bytes[i] = Math.floor(Math.random() * 256);
   }
   return `0x${Array.from(bytes)
@@ -82,31 +100,46 @@ function randomId(): string {
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
-export function useStudents() {
-  const [students, setStudents] = useState<Student[]>(() => load());
+/**
+ * @param walletAddress - The instructor's connected wallet address.
+ *   Pass `account?.address` from `useActiveAccount()`. Defaults to "guest"
+ *   so the hook is safe to use before a wallet is connected.
+ */
+export function useStudents(walletAddress: string = "guest") {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const walletRef = useRef(walletAddress);
 
+  // Reload from storage whenever walletAddress changes
   useEffect(() => {
-    // Subscribe to external mutations (other hook instances)
-    _listeners.add(setStudents);
-    return () => { _listeners.delete(setStudents); };
-  }, []);
+    walletRef.current = walletAddress;
+    setIsLoading(true);
+    loadAsync(walletAddress).then((loaded) => {
+      setStudents(loaded);
+      setIsLoading(false);
+    });
+    const unsub = subscribe(walletAddress, setStudents);
+    return unsub;
+  }, [walletAddress]);
 
   const addStudent = useCallback(
-    (name: string, address?: `0x${string}`): Student => {
+    async (name: string, address?: `0x${string}`): Promise<Student> => {
       const student: Student = {
         id: randomId(),
         name: name.trim(),
         address: address ?? generateRandomAddress(),
         createdAt: Date.now(),
       };
-      save([...load(), student]);
+      const current = await loadAsync(walletRef.current);
+      await saveAsync(walletRef.current, [...current, student]);
       return student;
     },
     []
   );
 
-  const removeStudent = useCallback((id: string) => {
-    save(load().filter((s) => s.id !== id));
+  const removeStudent = useCallback(async (id: string) => {
+    const current = await loadAsync(walletRef.current);
+    await saveAsync(walletRef.current, current.filter((s) => s.id !== id));
   }, []);
 
   const search = useCallback(
@@ -118,5 +151,5 @@ export function useStudents() {
     [students]
   );
 
-  return { students, addStudent, removeStudent, search };
+  return { students, isLoading, addStudent, removeStudent, search };
 }
