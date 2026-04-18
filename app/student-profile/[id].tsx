@@ -26,7 +26,7 @@ import { Theme } from "@/constants/Theme";
 import { sbtContract } from "@/constants/BitBelt";
 import { useStudents } from "@/hooks/useStudents";
 import BeltVisual from "@/components/BeltVisual";
-import LineageTree from "@/components/LineageTree";
+import InstructorLineage from "@/components/InstructorLineage";
 
 const { colors, spacing, typography, radius, shadow, touchTarget } = Theme;
 
@@ -187,9 +187,13 @@ export default function StudentProfileScreen() {
               </View>
             </View>
 
-            {/* ── Belt Lineage Tree ── */}
+            {/* ── Belt Lineage ── */}
             {!lineageLoading && !lineageError && tokenIds && tokenIds.length > 0 && (
-              <LineageTree tokenIds={tokenIds} />
+              <InstructorLineage
+                latestTokenId={tokenIds[tokenIds.length - 1]}
+                studentAddress={student.address}
+                students={students}
+              />
             )}
 
             {/* ── Belt History ── */}

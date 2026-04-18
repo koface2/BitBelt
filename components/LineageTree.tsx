@@ -10,15 +10,18 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Theme } from "@/constants/Theme";
 import LineageNode from "@/components/LineageNode";
+import type { Student } from "@/hooks/useStudents";
 
 const { colors, spacing, typography, radius, shadow } = Theme;
 
 interface Props {
   /** Token IDs in chronological order — oldest first, newest/current last. */
   tokenIds: readonly bigint[];
+  /** Student registry for resolving instructor addresses to names. */
+  students?: Student[];
 }
 
-export default function LineageTree({ tokenIds }: Props) {
+export default function LineageTree({ tokenIds, students = [] }: Props) {
   if (tokenIds.length === 0) return null;
 
   return (
@@ -44,6 +47,7 @@ export default function LineageTree({ tokenIds }: Props) {
             tokenId={id}
             isLatest={i === tokenIds.length - 1}
             isLast={i === tokenIds.length - 1}
+            students={students}
           />
         ))}
       </View>

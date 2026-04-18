@@ -12,6 +12,7 @@ import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { useReadContract } from "thirdweb/react";
 import { Theme } from "@/constants/Theme";
 import { sbtContract } from "@/constants/BitBelt";
+import type { Student } from "@/hooks/useStudents";
 
 const { colors, spacing, typography, radius } = Theme;
 
@@ -41,9 +42,11 @@ export interface LineageNodeProps {
   isLatest: boolean;
   /** True for the last node rendered — suppresses the spine below. */
   isLast:   boolean;
+  /** Full student registry — used to resolve instructor addresses to names. */
+  students?: Student[];
 }
 
-export default function LineageNode({ tokenId, isLatest, isLast }: LineageNodeProps) {
+export default function LineageNode({ tokenId, isLatest, isLast, students = [] }: LineageNodeProps) {
   const { data: info, isLoading } = useReadContract({
     contract: sbtContract,
     method:   "function getRankInfo(uint256 tokenId) view returns ((uint256 promotionDate, string beltColor, address instructorAddress))",
@@ -54,6 +57,16 @@ export default function LineageNode({ tokenId, isLatest, isLast }: LineageNodePr
   const date       = info ? formatDate((info as any).promotionDate) : "";
   const instructor = info ? String((info as any).instructorAddress) : "";
   const spec       = BELT_SPEC[beltColor] ?? BELT_SPEC.White;
+
+  // Resolve instructor wallet → name from local student registry
+  const instructorName = instructor
+    ? (students.find((s) => s.address.toLowerCase() === instructor.toLowerCase())?.name ?? null)
+    : null;
+  const instructorLabel = instructorName
+    ? instructorName
+    : instructor
+    ? `${instructor.slice(0, 6)}…${instructor.slice(-4)}`
+    : "";
 
   return (
     <View style={styles.root}>
@@ -113,16 +126,26 @@ export default function LineageNode({ tokenId, isLatest, isLast }: LineageNodePr
           </Text>
         </View>
 
-        {/* Meta: date + instructor */}
-        {!isLoading && (date || instructor) && (
+        {/* Meta: date */}
+        {!isLoading && !!date && (
           <View style={styles.metaRow}>
-            {!!date && <Text style={styles.metaText}>{date}</Text>}
-            {!!date && !!instructor && <View style={styles.metaSep} />}
-            {!!instructor && (
-              <Text style={styles.metaAddr} numberOfLines={1}>
-                {instructor.slice(0, 6)}…{instructor.slice(-4)}
-              </Text>
-            )}
+            <Text style={styles.metaText}>{date}</Text>
+          </View>
+        )}
+
+        {/* Promoted by */}
+        {!isLoading && !!instructorLabel && (
+          <View style={styles.promoterRow}>
+            <Text style={styles.promoterLabel}>Promoted by</Text>
+            <Text
+              style={[
+                styles.promoterName,
+                !instructorName && styles.promoterAddr,
+              ]}
+              numberOfLines={1}
+            >
+              {instructorLabel}
+            </Text>
           </View>
         )}
       </View>
@@ -238,10 +261,26 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs,
     color:    colors.gray500,
   },
-  metaAddr: {
-    fontSize:   typography.size.xs,
-    color:      colors.gray500,
-    fontFamily: "monospace",
-    flexShrink: 1,
+  promoterRow: {
+    flexDirection: "row",
+    alignItems:    "center",
+    gap:           spacing.xs,
+    flexWrap:      "wrap",
+  },
+  promoterLabel: {
+    fontSize:      typography.size.xs,
+    color:         colors.gray500,
+    fontStyle:     "italic",
+  },
+  promoterName: {
+    fontSize:      typography.size.xs,
+    fontWeight:    typography.weight.semibold,
+    color:         colors.gray700,
+    flexShrink:    1,
+  },
+  promoterAddr: {
+    fontFamily:  "monospace",
+    color:       colors.gray500,
+    fontWeight:  typography.weight.normal,
   },
 });
