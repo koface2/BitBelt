@@ -49,13 +49,16 @@ function BeltFetch({ address, onViewProfile }: BeltFetchProps) {
 
   const { data: rankInfo, isLoading: loadingRank } = useReadContract({
     contract: sbtContract,
-    method:   "function getRankInfo(uint256) view returns (uint256, string, address)",
+    method:   "function getRankInfo(uint256 tokenId) view returns ((uint256 promotionDate, string beltColor, address instructorAddress))",
     params:   [lastId ?? 0n],
     queryOptions: { enabled: !!lastId },
   });
 
   const isLoading   = loadingLineage || (!!lastId && loadingRank);
-  const currentBelt = rankInfo ? String(rankInfo[1]) : null;
+  const currentBelt =
+    rankInfo != null
+      ? String((rankInfo as { beltColor: string }).beltColor)
+      : null;
 
   return (
     <>

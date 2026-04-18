@@ -51,7 +51,10 @@ interface EntryProps {
 function BeltEntryCard({ tokenId, isLatest }: EntryProps) {
   const { data: info, isLoading, error } = useReadContract({
     contract: sbtContract,
-    method:   "function getRankInfo(uint256) view returns (uint256, string, address)",
+    // Double parens = single tuple output — matches the on-chain struct ABI
+    // encoding which includes an outer offset pointer before the data.
+    // Without them viem tries to decode 0x20 as the uint256 promotionDate.
+    method:   "function getRankInfo(uint256 tokenId) view returns ((uint256 promotionDate, string beltColor, address instructorAddress))",
     params:   [tokenId],
   });
 
@@ -64,11 +67,13 @@ function BeltEntryCard({ tokenId, isLatest }: EntryProps) {
     );
   }
 
-  if (error || !info) return null;
+  // info == null guards undefined; avoids !0n === true falsy trap
+  if (error || info == null) return null;
 
-  const promotionDate     = info[0] as bigint;
-  const beltColor         = String(info[1]);
-  const instructorAddress = String(info[2]);
+  const d = info as { promotionDate: bigint; beltColor: string; instructorAddress: string };
+  const promotionDate     = d.promotionDate;
+  const beltColor         = String(d.beltColor);
+  const instructorAddress = String(d.instructorAddress);
 
   return (
     <View style={[styles.entryCard, isLatest && styles.entryCardLatest]}>
