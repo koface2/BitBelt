@@ -31,6 +31,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   TouchableWithoutFeedback,
+  Alert,
 } from "react-native";
 import DateStepPicker from "@/components/DateStepPicker";
 import { useRouter } from "expo-router";
@@ -119,6 +120,12 @@ export default function IssueCertificationScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showBeltMenu, setShowBeltMenu]     = useState(false);
 
+  // ── Genesis / Founding Instructor mode ─────────────────────────────────
+  // When enabled the selected student IS also the certifying instructor
+  // (i.e. mintBeltAs is called with instructor == student). Used to create
+  // the root node of a new lineage chain with no upstream promoter.
+  const [genesisMode, setGenesisMode] = useState(false);
+
   // Success
   const [txHash, setTxHash] = useState<string | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
@@ -142,6 +149,11 @@ export default function IssueCertificationScreen() {
     setNameQuery(s.name);
     setSuggestions([]);
     setShowSuggestions(false);
+    // In genesis mode: auto-fill "Certifying As" with this student
+    if (genesisMode) {
+      setCertifyingAs(s);
+      setCertifyingAsQuery(s.name);
+    }
   };
 
   // ── Promoter search handlers
@@ -227,7 +239,9 @@ export default function IssueCertificationScreen() {
         setTxHash(result.transactionHash);
       },
       onError: (err) => {
-        setTxError(err.message ?? "Transaction failed. Please try again.");
+        const msg = err.message ?? "Transaction failed. Please try again.";
+        setTxError(msg);
+        Alert.alert("Transaction Failed", msg);
       },
     });
   };
@@ -245,6 +259,7 @@ export default function IssueCertificationScreen() {
     setCertifyingAsQuery("");
     setCertifyingAsSugg([]);
     setShowCertifyingAsSugg(false);
+    setGenesisMode(false);
     setSelectedBelt("Blue");
     setEffectiveDate(new Date());
     setTxHash(null);
@@ -475,6 +490,53 @@ export default function IssueCertificationScreen() {
             )}
           </View>
 
+          {/* ── Card: Genesis / Founding Instructor ───────────────────── */}
+          <Pressable
+            onPress={() => {
+              const next = !genesisMode;
+              setGenesisMode(next);
+              if (next) {
+                // Entering genesis mode: auto-fill certifyingAs from already-selected student
+                if (selectedStudent) {
+                  setCertifyingAs(selectedStudent);
+                  setCertifyingAsQuery(selectedStudent.name);
+                }
+                // Clear promoter — genesis nodes have no upstream promoter
+                setPromoterQuery("");
+                setPromoterSelected(null);
+                setPromoterSuggestions([]);
+                setShowPromoterSugg(false);
+              } else {
+                // Leaving genesis mode: clear certifying-as only if it was auto-set
+                if (certifyingAs && selectedStudent && certifyingAs.id === selectedStudent.id) {
+                  setCertifyingAs(null);
+                  setCertifyingAsQuery("");
+                }
+              }
+            }}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: genesisMode }}
+            accessibilityLabel="Genesis / Founding Instructor mode"
+            style={({ pressed }) => [
+              styles.genesisToggleCard,
+              genesisMode && styles.genesisToggleCardActive,
+              pressed && styles.genesisToggleCardPressed,
+            ]}
+          >
+            <View style={styles.genesisToggleLeft}>
+              <Text style={[styles.genesisToggleTitle, genesisMode && styles.genesisToggleTitleActive]}>
+                ⛓ Genesis / Founding Instructor
+              </Text>
+              <Text style={styles.genesisToggleHint}>
+                No upstream promoter — creates the root node of a new lineage chain.
+                On-chain record will show this instructor certified themselves.
+              </Text>
+            </View>
+            <View style={[styles.togglePill, genesisMode && styles.togglePillOn]}>
+              <View style={[styles.toggleThumb, genesisMode && styles.toggleThumbOn]} />
+            </View>
+          </Pressable>
+
           {/* ── Card: Student ─────────────────────────────────────────── */}
           <View style={styles.card}>
             <Text style={styles.cardLabel}>Student</Text>
@@ -672,8 +734,8 @@ export default function IssueCertificationScreen() {
             />
           </View>
 
-          {/* ── Card: Promoted By ────────────────────────────────────────── */}
-          <View style={styles.card}>
+          {/* ── Card: Promoted By (hidden in genesis mode) ───────────── */}
+          {!genesisMode && <View style={styles.card}>
             <Text style={styles.cardLabel}>Promoted By</Text>
             <Text style={styles.cardHint}>
               Search a student name or type any instructor name — for display purposes
@@ -725,7 +787,7 @@ export default function IssueCertificationScreen() {
                 ))}
               </View>
             )}
-          </View>
+          </View>}
 
           {/* ── Card: Summary ────────────────────────────────────────────── */}
           <View style={[styles.card, styles.summaryCard]}>
@@ -767,7 +829,17 @@ export default function IssueCertificationScreen() {
               </Text>
             </View>
 
-            {promoterQuery.length > 0 && (
+            {genesisMode && (
+              <>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryKey}>Mode</Text>
+                  <Text style={[styles.summaryVal, styles.summaryValAdmin]}>⛓ Genesis Node</Text>
+                </View>
+              </>
+            )}
+
+            {!genesisMode && promoterQuery.length > 0 && (
               <>
                 <View style={styles.summaryDivider} />
                 <View style={styles.summaryRow}>
@@ -783,7 +855,7 @@ export default function IssueCertificationScreen() {
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryKey}>On-Chain Instructor</Text>
                   <Text style={[styles.summaryVal, styles.summaryValAdmin]} numberOfLines={1}>
-                    {certifyingAs.name}
+                    {genesisMode ? `${certifyingAs.name} (self)` : certifyingAs.name}
                   </Text>
                 </View>
               </>
@@ -970,6 +1042,64 @@ const styles = StyleSheet.create({
   summaryValAdmin: {
     color:      colors.warning,
     fontWeight: typography.weight.semibold,
+  },
+
+  // ── Genesis toggle card ───────────────────────────────────────────────────
+  genesisToggleCard: {
+    flexDirection:   "row",
+    alignItems:      "center",
+    gap:             spacing.md,
+    padding:         spacing.lg,
+    borderRadius:    radius.lg,
+    borderWidth:     1.5,
+    borderColor:     colors.gray300,
+    backgroundColor: colors.surface,
+  },
+  genesisToggleCardActive: {
+    borderColor:     colors.primary,
+    backgroundColor: colors.primaryMuted,
+  },
+  genesisToggleCardPressed: {
+    opacity: 0.85,
+  },
+  genesisToggleLeft: {
+    flex: 1,
+    gap:  4,
+  },
+  genesisToggleTitle: {
+    fontSize:   typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color:      colors.gray900,
+  },
+  genesisToggleTitleActive: {
+    color: colors.primary,
+  },
+  genesisToggleHint: {
+    fontSize: typography.size.xs,
+    color:    colors.gray500,
+    lineHeight: 16,
+  },
+  // Toggle pill (iOS-style switch visual)
+  togglePill: {
+    width:           44,
+    height:          26,
+    borderRadius:    13,
+    backgroundColor: colors.gray300,
+    padding:         2,
+    justifyContent:  "center",
+  },
+  togglePillOn: {
+    backgroundColor: colors.primary,
+  },
+  toggleThumb: {
+    width:           22,
+    height:          22,
+    borderRadius:    11,
+    backgroundColor: colors.white ?? "#FFFFFF",
+    alignSelf:       "flex-start",
+  },
+  toggleThumbOn: {
+    alignSelf: "flex-end",
   },
 
   cardLabel: {

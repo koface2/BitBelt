@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useSegments } from "expo-router";
 import { useActiveAccount, useConnect, useDisconnect, useReadContract } from "thirdweb/react";
 import { preAuthenticate } from "thirdweb/wallets";
 import { Theme } from "@/constants/Theme";
@@ -22,6 +22,7 @@ const { colors, spacing, typography, radius, shadow, touchTarget } = Theme;
 // ── Screen ─────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const router = useRouter();
+  const segments = useSegments();
   const account = useActiveAccount();
   const { connect, isConnecting, error: connectError } = useConnect();
   const { disconnect } = useDisconnect();
@@ -34,12 +35,15 @@ export default function HomeScreen() {
   const [isSendingOtp, setIsSendingOtp] = useState(false);
 
   // ── Redirect to main app once connected ──────────────────────────────────
-  // useEffect handles the async case (AutoConnect reconnecting on load).
+  // Only redirect if we are actually on the login screen (segments[0] is
+  // "(tabs)"). Without this guard the effect fires from a backgrounded
+  // component when AutoConnect reconnects mid-session and hijacks navigation.
   useEffect(() => {
-    if (account) {
+    const onLoginScreen = segments.length === 0 || segments[0] === "(tabs)";
+    if (account && onLoginScreen) {
       router.replace("/dashboard");
     }
-  }, [account]);
+  }, [account, segments]);
 
   // ── On-chain instructor role check ───────────────────────────────────────
   const { data: isInstructor } = useReadContract({

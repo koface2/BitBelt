@@ -30,14 +30,63 @@ function storageKey(walletAddress: string): string {
 
 // ── Cross-platform load / save ────────────────────────────────────────────────
 
+/** Legacy key used before per-wallet namespacing was added. */
+const LEGACY_STORAGE_KEY = "bitbelt_students";
+
 async function loadAsync(walletAddress: string): Promise<Student[]> {
+  const key = storageKey(walletAddress);
+  // Never migrate legacy data into the anonymous "guest" namespace —
+  // doing so would delete the legacy key before the real wallet address is
+  // known, making the data unreachable once AutoConnect fires.
+  const isGuest = walletAddress === "guest";
+
   try {
+    // ── 1. Try the wallet-scoped key first ──────────────────────────────
     if (Platform.OS === "web" && typeof localStorage !== "undefined") {
-      const raw = localStorage.getItem(storageKey(walletAddress));
-      return raw ? (JSON.parse(raw) as Student[]) : [];
+      const raw = localStorage.getItem(key);
+      if (raw) return JSON.parse(raw) as Student[];
+    } else {
+      const raw = await AsyncStorage.getItem(key);
+      if (raw) return JSON.parse(raw) as Student[];
     }
-    const raw = await AsyncStorage.getItem(storageKey(walletAddress));
-    return raw ? (JSON.parse(raw) as Student[]) : [];
+
+    if (isGuest) return [];
+
+    // ── 2. One-time migration from the old flat legacy key ──────────────
+    if (Platform.OS === "web" && typeof localStorage !== "undefined") {
+      const oldRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
+      if (oldRaw) {
+        localStorage.setItem(key, oldRaw);
+        localStorage.removeItem(LEGACY_STORAGE_KEY);
+        localStorage.removeItem(storageKey("guest")); // clean up if guest got there first
+        return JSON.parse(oldRaw) as Student[];
+      }
+      // ── 3. Recovery: guest may have claimed the legacy data before wallet 
+      //    was known. Reclaim it under the real wallet address.
+      const guestRaw = localStorage.getItem(storageKey("guest"));
+      if (guestRaw) {
+        localStorage.setItem(key, guestRaw);
+        localStorage.removeItem(storageKey("guest"));
+        return JSON.parse(guestRaw) as Student[];
+      }
+    } else {
+      const oldRaw = await AsyncStorage.getItem(LEGACY_STORAGE_KEY);
+      if (oldRaw) {
+        await AsyncStorage.setItem(key, oldRaw);
+        await AsyncStorage.removeItem(LEGACY_STORAGE_KEY);
+        await AsyncStorage.removeItem(storageKey("guest"));
+        return JSON.parse(oldRaw) as Student[];
+      }
+      // ── 3. Recovery: guest may have claimed the legacy data first.
+      const guestRaw = await AsyncStorage.getItem(storageKey("guest"));
+      if (guestRaw) {
+        await AsyncStorage.setItem(key, guestRaw);
+        await AsyncStorage.removeItem(storageKey("guest"));
+        return JSON.parse(guestRaw) as Student[];
+      }
+    }
+
+    return [];
   } catch {
     return [];
   }
