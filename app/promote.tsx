@@ -112,7 +112,7 @@ export default function PromoteScreen() {
     }
 
     // Convert Date → unix timestamp (seconds). Contract rejects future dates.
-    const officialTimestamp = BigInt(Math.floor(promotionDate.getTime() / 1000));
+    const officialTimestamp = BigInt(Math.max(0, Math.floor(promotionDate.getTime() / 1000)));
 
     const tx = prepareContractCall({
       contract: sbtContract,

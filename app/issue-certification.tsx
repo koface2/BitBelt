@@ -206,7 +206,7 @@ export default function IssueCertificationScreen() {
     setTxError(null);
 
     const officialTimestamp = BigInt(
-      Math.floor(effectiveDate.getTime() / 1000)
+      Math.max(0, Math.floor(effectiveDate.getTime() / 1000))
     );
 
     // If admin has chosen to certify as a specific instructor, use mintBeltAs

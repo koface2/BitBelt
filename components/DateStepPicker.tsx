@@ -27,7 +27,7 @@ const { colors, spacing, typography, radius, shadow, touchTarget } = Theme;
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const CURRENT_YEAR = new Date().getFullYear();
-const MIN_YEAR = 1960;
+const MIN_YEAR = 1970;
 
 const MONTHS = [
   "January", "February", "March", "April",
@@ -47,6 +47,7 @@ interface DateStepPickerProps {
   visible: boolean;
   value: Date;
   maximumDate?: Date;
+  minimumDate?: Date;
   onConfirm: (date: Date) => void;
   onClose: () => void;
 }
@@ -57,6 +58,7 @@ export default function DateStepPicker({
   visible,
   value,
   maximumDate,
+  minimumDate,
   onConfirm,
   onClose,
 }: DateStepPickerProps) {
@@ -81,18 +83,24 @@ export default function DateStepPicker({
   const maxMonth = maximumDate ? maximumDate.getMonth()      : 11;
   const maxDay   = maximumDate ? maximumDate.getDate()       : 31;
 
+  const minYear  = minimumDate ? Math.max(minimumDate.getFullYear(), MIN_YEAR) : MIN_YEAR;
+  const minMonth = minimumDate ? minimumDate.getMonth() : 0;
+  const minDay   = minimumDate ? minimumDate.getDate()  : 1;
+
+  const isYearDisabled = (y: number) => y < minYear || y > maxYear;
+
   const isMonthDisabled = (m: number) => {
-    if (year < maxYear) return false;
-    if (year > maxYear) return true;
-    return m > maxMonth;
+    if (year > maxYear || year < minYear) return true;
+    if (year === maxYear && m > maxMonth) return true;
+    if (year === minYear && m < minMonth) return true;
+    return false;
   };
 
   const isDayDisabled = (d: number) => {
-    if (year < maxYear) return false;
-    if (year > maxYear) return true;
-    if (month < maxMonth) return false;
-    if (month > maxMonth) return true;
-    return d > maxDay;
+    if (year < maxYear && year > minYear) return false;
+    if (year === maxYear && month === maxMonth && d > maxDay) return true;
+    if (year === minYear && month === minMonth && d < minDay) return true;
+    return false;
   };
 
   const totalDays = daysInMonth(year, month);
@@ -135,7 +143,7 @@ export default function DateStepPicker({
   // ── Year list ─────────────────────────────────────────────────────────────────
 
   const years: number[] = [];
-  for (let y = maxYear; y >= MIN_YEAR; y--) years.push(y);
+  for (let y = maxYear; y >= minYear; y--) years.push(y);
 
   return (
     <Modal
