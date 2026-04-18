@@ -1,0 +1,29 @@
+[profile.default]
+src      = "contracts"
+script   = "script"
+out      = "out"
+libs     = ["lib"]
+solc     = "0.8.24"
+# foundry maps OpenZeppelin imports from lib/openzeppelin-contracts
+remappings = [
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+]
+
+optimizer        = true
+optimizer_runs   = 200
+
+# ── RPC endpoints ─────────────────────────────────────────────────────────────
+[rpc_endpoints]
+base_sepolia = "${BASE_SEPOLIA_RPC_URL}"
+base_mainnet = "https://mainnet.base.org"
+
+# ── Etherscan / Basescan verification ────────────────────────────────────────
+[etherscan]
+base_sepolia = { key = "${BASESCAN_API_KEY}", url = "https://api-sepolia.basescan.org/api" }
+base_mainnet = { key = "${BASESCAN_API_KEY}", url = "https://api.basescan.org/api" }
+
+# ── fmt ───────────────────────────────────────────────────────────────────────
+[fmt]
+line_length    = 100
+tab_width      = 4
+bracket_spacing = true
