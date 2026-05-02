@@ -1,0 +1,15 @@
+diff --git a/node_modules/@expo/ngrok/index.js b/node_modules/@expo/ngrok/index.js
+index c9e5f8d..58fe35e 100644
+--- a/node_modules/@expo/ngrok/index.js
++++ b/node_modules/@expo/ngrok/index.js
+@@ -27,7 +27,9 @@ async function connect(opts) {
+ async function connectRetry(opts, retryCount = 0) {
+   opts.name = String(opts.name || uuid.v4());
+   try {
+-    const response = await ngrokClient.startTunnel(opts);
++    // Strip fields that are invalid for the ngrok v3 tunnel API
++    const { authtoken, configPath, port, onLogEvent, onStatusChange, ...tunnelOpts } = opts;
++    const response = await ngrokClient.startTunnel(tunnelOpts);
+     return response.public_url;
+   } catch (err) {
+     if (!isRetriable(err) || retryCount >= 100) {

@@ -1,0 +1,1 @@
+__d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{value:!0}),e.assertInsightEnabled=async function(t){const s=await(0,n.getInsightEnabledChainIds)();if(!t.every(n=>s.includes(n.id)))throw new Error(`Insight is not available for chains ${t.filter(n=>!s.includes(n.id)).map(n=>n.id).join(", ")}`)};var n=r(d[0])},3850,[719]);
