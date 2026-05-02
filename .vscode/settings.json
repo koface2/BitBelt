@@ -1,0 +1,26 @@
+{
+  // Live Server serves the compiled web output, not the raw source tree.
+  "liveServer.settings.root": "/dist",
+
+  // TypeScript settings
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "editor.formatOnSave": true,
+
+  // Exclude build / generated directories from file explorer noise
+  "files.exclude": {
+    "dist/**": false,
+    "out/**": true,
+    "node_modules": true,
+    ".expo": true,
+    "broadcast": true,
+    "cache": true
+  },
+
+  // Search exclusions
+  "search.exclude": {
+    "node_modules": true,
+    "dist": true,
+    "out": true,
+    "lib/openzeppelin-contracts": true
+  }
+}

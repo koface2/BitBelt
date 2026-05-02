@@ -1,8 +1,12 @@
-// TODO: Initialize Thirdweb client using THIRDWEB_CLIENT_ID from env
-// TODO: Hook will expose: wallet connection, SBT minting, lineage read calls,
-//       and gasless transaction helpers via the Paymaster URL.
+/**
+ * useBitBelt — convenience re-export of the core BitBelt SDK atoms.
+ *
+ * Use this hook in screens that need the client, chain, contract, or wallet
+ * without importing each constant individually.
+ */
+
+import { client, chain, sbtContract, wallet, INSTRUCTOR_ROLE, DEFAULT_ADMIN_ROLE } from "@/constants/BitBelt";
 
 export function useBitBelt() {
-  // Placeholder — full implementation coming soon
-  return {};
+  return { client, chain, sbtContract, wallet, INSTRUCTOR_ROLE, DEFAULT_ADMIN_ROLE };
 }

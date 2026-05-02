@@ -49,7 +49,7 @@ export interface LineageNodeProps {
 export default function LineageNode({ tokenId, isLatest, isLast, students = [] }: LineageNodeProps) {
   const { data: info, isLoading } = useReadContract({
     contract: sbtContract,
-    method:   "function getRankInfo(uint256 tokenId) view returns ((uint256 promotionDate, string beltColor, address instructorAddress))",
+    method:   "function getRankInfo(uint256 tokenId) view returns ((uint256 promotionDate, string beltColor, address instructorAddress, string studentName, string instructorName))",
     params:   [tokenId],
   });
 

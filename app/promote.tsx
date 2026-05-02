@@ -26,22 +26,12 @@ import { useRouter } from "expo-router";
 import { useActiveAccount, useDisconnect, useSendTransaction } from "thirdweb/react";
 import { prepareContractCall } from "thirdweb";
 import { Theme } from "@/constants/Theme";
+import { BELTS, type BeltColor } from "@/constants/belts";
 import { chain, sbtContract, wallet } from "@/constants/BitBelt";
 import { useStudents } from "@/hooks/useStudents";
 import type { Student } from "@/hooks/useStudents";
 
 const { colors, spacing, typography, radius, shadow, touchTarget } = Theme;
-
-// ── Belt options ─────────────────────────────────────────────────────────────
-type BeltColor = "White" | "Blue" | "Purple" | "Brown" | "Black";
-
-const BELTS: { label: BeltColor; bg: string; fg: string; border: string }[] = [
-  { label: "White",  bg: colors.belt.white,  fg: colors.onBelt.white,  border: colors.gray300 },
-  { label: "Blue",   bg: colors.belt.blue,   fg: colors.onBelt.blue,   border: colors.belt.blue },
-  { label: "Purple", bg: colors.belt.purple, fg: colors.onBelt.purple, border: colors.belt.purple },
-  { label: "Brown",  bg: colors.belt.brown,  fg: colors.onBelt.brown,  border: colors.belt.brown },
-  { label: "Black",  bg: colors.belt.black,  fg: colors.onBelt.black,  border: colors.belt.black },
-];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function isValidAddress(addr: string): boolean {
@@ -78,7 +68,23 @@ export default function PromoteScreen() {
   const [promotionDate, setPromotionDate] = useState<Date>(new Date());
   const [showPicker, setShowPicker] = useState(false);
   const today = new Date();
+  // Instructor name — persisted to localStorage per wallet so it auto-fills.
+  const instructorNameKey = account?.address
+    ? `bitbelt_instructor_name:${account.address.toLowerCase()}`
+    : null;
+  const [instructorName, setInstructorName] = useState<string>(() => {
+    if (typeof localStorage !== "undefined" && instructorNameKey) {
+      return localStorage.getItem(instructorNameKey) ?? "";
+    }
+    return "";
+  });
 
+  const handleInstructorNameChange = (text: string) => {
+    setInstructorName(text);
+    if (typeof localStorage !== "undefined" && instructorNameKey) {
+      localStorage.setItem(instructorNameKey, text);
+    }
+  };
   const studentAddress = selectedStudent?.address ?? "";
 
   // ── Student search handlers ──────────────────────────────────────────────────
@@ -117,8 +123,14 @@ export default function PromoteScreen() {
     const tx = prepareContractCall({
       contract: sbtContract,
       method:
-        "function mintBelt(address student, string color, uint256 officialTimestamp) external returns (uint256 tokenId)",
-      params: [studentAddress.trim() as `0x${string}`, selectedBelt, officialTimestamp],
+        "function mintBelt(address student, string color, uint256 officialTimestamp, string studentName, string instructorName) external returns (uint256 tokenId)",
+      params: [
+        studentAddress.trim() as `0x${string}`,
+        selectedBelt,
+        officialTimestamp,
+        selectedStudent?.name ?? "",
+        instructorName.trim(),
+      ],
     });
 
     sendTx(tx, {
@@ -187,6 +199,25 @@ export default function PromoteScreen() {
               </Text>
             </View>
           )}
+
+          {/* ── Instructor name ── */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>YOUR NAME</Text>
+            <Text style={styles.fieldHint}>Recorded on-chain as the certifying instructor</Text>
+            <View style={[styles.inputContainer, instructorName.trim().length > 0 && styles.inputContainerValid]}>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. John Danaher"
+                placeholderTextColor={colors.gray500}
+                value={instructorName}
+                onChangeText={handleInstructorNameChange}
+                autoCorrect={false}
+                autoCapitalize="words"
+                returnKeyType="next"
+                accessibilityLabel="Instructor name"
+              />
+            </View>
+          </View>
 
           {/* ── Student Search ── */}
           <View style={styles.section}>
@@ -363,6 +394,13 @@ export default function PromoteScreen() {
               <Text style={styles.summaryLabel}>Student</Text>
               <Text style={styles.summaryValue} numberOfLines={1}>
                 {selectedStudent ? selectedStudent.name : "—"}
+              </Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Instructor</Text>
+              <Text style={styles.summaryValue} numberOfLines={1}>
+                {instructorName.trim() || "—"}
               </Text>
             </View>
           </View>

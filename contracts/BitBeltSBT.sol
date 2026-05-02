@@ -36,11 +36,15 @@ contract BitBeltSBT is ERC721, AccessControl {
      *                    new Date(promotionDate * 1000).toISOString().
      * beltColor        — One of: "White" | "Blue" | "Purple" | "Brown" | "Black"
      * instructorAddress— Verified instructor wallet that issued the token.
+     * studentName      — Human-readable name of the promoted student.
+     * instructorName   — Human-readable name of the certifying instructor.
      */
     struct RankInfo {
         uint256 promotionDate;
         string  beltColor;
         address instructorAddress;
+        string  studentName;
+        string  instructorName;
     }
 
     /// @dev tokenId → RankInfo
@@ -61,7 +65,9 @@ contract BitBeltSBT is ERC721, AccessControl {
         address indexed student,
         address indexed instructorAddress,
         string          beltColor,
-        uint256         promotionDate
+        uint256         promotionDate,
+        string          studentName,
+        string          instructorName
     );
 
     event BeltBurned(uint256 indexed tokenId, address indexed student);
@@ -110,14 +116,18 @@ contract BitBeltSBT is ERC721, AccessControl {
      *                           Pass 0 to default to block.timestamp (live mints).
      *                           Pass a past timestamp for grandfathered promotions.
      *                           Future timestamps are rejected.
+     * @param sName              Human-readable name of the promoted student.
+     * @param iName              Human-readable name of the certifying instructor.
      * @return tokenId           The newly minted token ID.
      */
     function mintBelt(
         address student,
         string memory color,
-        uint256 officialTimestamp
+        uint256 officialTimestamp,
+        string memory sName,
+        string memory iName
     ) external onlyRole(INSTRUCTOR_ROLE) returns (uint256 tokenId) {
-        return _mintBeltInternal(student, color, officialTimestamp, msg.sender);
+        return _mintBeltInternal(student, color, officialTimestamp, msg.sender, sName, iName);
     }
 
     /**
@@ -127,15 +137,19 @@ contract BitBeltSBT is ERC721, AccessControl {
      *         promotion as if it were issued by a specific instructor wallet.
      * @param instructor  Address to record as the certifying instructor.
      *                    Must not be zero address.
+     * @param sName       Human-readable name of the promoted student.
+     * @param iName       Human-readable name of the certifying instructor.
      */
     function mintBeltAs(
         address student,
         string memory color,
         uint256 officialTimestamp,
-        address instructor
+        address instructor,
+        string memory sName,
+        string memory iName
     ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (uint256 tokenId) {
         require(instructor != address(0), "BitBeltSBT: instructor is zero address");
-        return _mintBeltInternal(student, color, officialTimestamp, instructor);
+        return _mintBeltInternal(student, color, officialTimestamp, instructor, sName, iName);
     }
 
     /// @dev Shared minting logic used by both mintBelt and mintBeltAs.
@@ -143,7 +157,9 @@ contract BitBeltSBT is ERC721, AccessControl {
         address student,
         string memory color,
         uint256 officialTimestamp,
-        address instructor
+        address instructor,
+        string memory sName,
+        string memory iName
     ) internal returns (uint256 tokenId) {
         require(student != address(0), "BitBeltSBT: mint to zero address");
         _validateBeltColor(color); // also rejects empty strings
@@ -165,13 +181,15 @@ contract BitBeltSBT is ERC721, AccessControl {
         _rankInfo[tokenId] = RankInfo({
             promotionDate:     promotionDate,
             beltColor:         color,
-            instructorAddress: instructor
+            instructorAddress: instructor,
+            studentName:       sName,
+            instructorName:    iName
         });
         _studentTokens[student].push(tokenId);
 
         _safeMint(student, tokenId);
 
-        emit BeltMinted(tokenId, student, instructor, color, promotionDate);
+        emit BeltMinted(tokenId, student, instructor, color, promotionDate, sName, iName);
     }
 
     // ─────────────────────────────── Burn ───────────────────────────────────
@@ -217,17 +235,23 @@ contract BitBeltSBT is ERC721, AccessControl {
         _requireOwned(tokenId);
         RankInfo memory info = _rankInfo[tokenId];
 
+        bytes memory attrs = abi.encodePacked(
+            '{"trait_type":"Belt Color","value":"',       info.beltColor,         '"},'
+            '{"trait_type":"Student","value":"',          info.studentName,        '"},'
+            '{"trait_type":"Instructor","value":"',       info.instructorName,     '"},'
+            '{"trait_type":"Instructor Address","value":"', Strings.toHexString(info.instructorAddress), '"},'
+            '{"display_type":"date","trait_type":"Promotion Date","value":',
+                info.promotionDate.toString(),
+            '}'
+        );
+
         bytes memory json = abi.encodePacked(
             '{"name":"BitBelt ',
             info.beltColor,
             ' Belt","description":"A verified Brazilian Jiu-Jitsu belt promotion credential. '
             'This Soulbound Token is permanently recorded on Base and cannot be transferred.",',
-            '"attributes":['
-                '{"trait_type":"Belt Color","value":"',     info.beltColor, '"},'
-                '{"trait_type":"Instructor","value":"',     Strings.toHexString(info.instructorAddress), '"},'
-                '{"display_type":"date","trait_type":"Promotion Date","value":',
-                    info.promotionDate.toString(),
-                '}'
+            '"attributes":[',
+            attrs,
             ']}'
         );
 

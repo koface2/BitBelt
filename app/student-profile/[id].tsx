@@ -55,7 +55,7 @@ function BeltEntryCard({ tokenId, isLatest }: EntryProps) {
     // Double parens = single tuple output — matches the on-chain struct ABI
     // encoding which includes an outer offset pointer before the data.
     // Without them viem tries to decode 0x20 as the uint256 promotionDate.
-    method:   "function getRankInfo(uint256 tokenId) view returns ((uint256 promotionDate, string beltColor, address instructorAddress))",
+    method:   "function getRankInfo(uint256 tokenId) view returns ((uint256 promotionDate, string beltColor, address instructorAddress, string studentName, string instructorName))",
     params:   [tokenId],
   });
 

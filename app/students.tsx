@@ -126,13 +126,15 @@ function isValidAddress(addr: string): boolean {
 export default function StudentsScreen() {
   const router = useRouter();
   const account = useActiveAccount();
-  const { students, addStudent, removeStudent } = useStudents(account?.address);
+  const { students, addStudent, removeStudent, recoverFromChain } = useStudents(account?.address);
 
   // ── Add form state ──────────────────────────────────────────────────────────
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [useRandom, setUseRandom] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
+  const [recovering, setRecovering] = useState(false);
+  const [recoverMsg, setRecoverMsg] = useState<string | null>(null);
 
   const nameTouched = name.length > 0;
   const addressTouched = address.length > 0;
@@ -162,6 +164,24 @@ export default function StudentsScreen() {
         { text: "Remove", style: "destructive", onPress: () => removeStudent(student.id) },
       ]
     );
+  };
+
+  const handleRecover = async () => {
+    if (!account?.address) return;
+    setRecovering(true);
+    setRecoverMsg(null);
+    try {
+      const count = await recoverFromChain();
+      setRecoverMsg(
+        count > 0
+          ? `Recovered ${count} student${count === 1 ? "" : "s"} from the blockchain. Rename them below.`
+          : "No new students found on-chain for your instructor address."
+      );
+    } catch {
+      setRecoverMsg("Recovery failed. Check your connection and try again.");
+    } finally {
+      setRecovering(false);
+    }
   };
 
   const handleCopy = async (addr: string) => {
@@ -298,6 +318,15 @@ export default function StudentsScreen() {
             </View>
           </View>
 
+          {recoverMsg && (
+            <View style={[
+              styles.recoverBanner,
+              recoverMsg.startsWith("Recovered") ? styles.recoverBannerSuccess : styles.recoverBannerInfo,
+            ]}>
+              <Text style={styles.recoverBannerText}>{recoverMsg}</Text>
+            </View>
+          )}
+
           {students.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyGlyph}>🥋</Text>
@@ -305,6 +334,23 @@ export default function StudentsScreen() {
               <Text style={styles.emptyDesc}>
                 Add students above to use the name search in the Promote screen.
               </Text>
+              {account?.address && (
+                <Pressable
+                  onPress={handleRecover}
+                  disabled={recovering}
+                  style={({ pressed }) => [
+                    styles.recoverButton,
+                    pressed && styles.recoverButtonPressed,
+                    recovering && styles.recoverButtonDisabled,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Recover students from blockchain"
+                >
+                  <Text style={styles.recoverButtonText}>
+                    {recovering ? "Scanning blockchain…" : "⛓ Recover from Blockchain"}
+                  </Text>
+                </Pressable>
+              )}
             </View>
           ) : (
             [...students]
@@ -566,4 +612,34 @@ const styles = StyleSheet.create({
   },
   deleteBtnPressed: { backgroundColor: colors.error },
   deleteBtnText: { fontSize: typography.size.sm, color: colors.error },
+
+  // ── Recovery ──
+  recoverButton: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryMuted,
+  },
+  recoverButtonPressed: { backgroundColor: colors.primary },
+  recoverButtonDisabled: { opacity: 0.5 },
+  recoverButtonText: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.primary,
+  },
+  recoverBanner: {
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  recoverBannerSuccess: { backgroundColor: "#d1fae5" },
+  recoverBannerInfo: { backgroundColor: colors.primaryMuted },
+  recoverBannerText: {
+    fontSize: typography.size.sm,
+    color: colors.gray700,
+    lineHeight: 18,
+  },
 });

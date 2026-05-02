@@ -43,6 +43,7 @@ import {
 import { prepareContractCall } from "thirdweb";
 
 import { Theme } from "@/constants/Theme";
+import { BELTS, type BeltColor } from "@/constants/belts";
 import { sbtContract, wallet } from "@/constants/BitBelt";
 import { useStudents } from "@/hooks/useStudents";
 import type { Student } from "@/hooks/useStudents";
@@ -52,21 +53,6 @@ const { colors, spacing, typography, radius, shadow, touchTarget } = Theme;
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const BASESCAN_TX_BASE = "https://sepolia.basescan.org/tx/";
-
-type BeltColor = "White" | "Blue" | "Purple" | "Brown" | "Black";
-
-const BELTS: {
-  label: BeltColor;
-  bg: string;
-  fg: string;
-  border: string;
-}[] = [
-  { label: "White",  bg: colors.belt.white,  fg: colors.onBelt.white,  border: colors.gray300 },
-  { label: "Blue",   bg: colors.belt.blue,   fg: colors.onBelt.blue,   border: colors.belt.blue },
-  { label: "Purple", bg: colors.belt.purple, fg: colors.onBelt.purple, border: colors.belt.purple },
-  { label: "Brown",  bg: colors.belt.brown,  fg: colors.onBelt.brown,  border: colors.belt.brown },
-  { label: "Black",  bg: colors.belt.black,  fg: colors.onBelt.black,  border: colors.belt.black },
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

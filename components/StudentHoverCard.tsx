@@ -50,7 +50,7 @@ function BeltFetch({ address, onViewProfile }: BeltFetchProps) {
 
   const { data: rankInfo, isLoading: loadingRank } = useReadContract({
     contract: sbtContract,
-    method:   "function getRankInfo(uint256 tokenId) view returns ((uint256 promotionDate, string beltColor, address instructorAddress))",
+    method:   "function getRankInfo(uint256 tokenId) view returns ((uint256 promotionDate, string beltColor, address instructorAddress, string studentName, string instructorName))",
     params:   [lastId ?? 0n],
     queryOptions: { enabled: !!lastId },
   });
